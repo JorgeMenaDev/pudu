@@ -21,15 +21,23 @@
   "build": {
     "appId": "com.andesphere.glimpse",
     "productName": "Glimpse",
-    "files": ["dist-electron/**", "dist-renderer/**", "package.json"],
-    "directories": { "output": "release" },
+    "files": [
+      "dist-electron/**",
+      "dist-renderer/**",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    },
     "mac": {
       "category": "public.app-category.productivity",
       "target": "dmg",
       "extendInfo": {
         "NSCameraUsageDescription": "Glimpse shows your camera in a bubble while you record.",
         "NSMicrophoneUsageDescription": "Glimpse records your voice with your screen."
-      }
+      },
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
     }
   }
 }
