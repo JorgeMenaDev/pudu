@@ -8,3 +8,4 @@ Loom-like screen + camera recorder for macOS. Bun workspaces: `packages/contract
 - `apps/web/src/components/ui` and the theme tokens in `index.css` are ported from T3 Code. Keep them close to upstream; put Glimpse styles in the bottom section of `index.css`.
 - Electron won't start if `ELECTRON_RUN_AS_NODE=1` is set (T3 Code terminals set it). Prefix commands with `env -u ELECTRON_RUN_AS_NODE`.
 - Bun's bundler bakes `__dirname` in at build time. Resolve app files from `app.getAppPath()`.
+- Signed builds use the hardened runtime: `apps/desktop/build/entitlements.mac.plist` must keep the camera and audio-input entitlements, or macOS silently blocks both with no prompt.
