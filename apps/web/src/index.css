@@ -1,5 +1,5 @@
 /* Theme tokens and base styles ported from T3 Code (MIT, (c) 2026 T3 Tools Inc.):
-   apps/web/src/index.css. Glimpse-specific styles are at the bottom. */
+   apps/web/src/index.css. Pudu-specific styles are at the bottom. */
 @import "tailwindcss";
 
 @custom-variant dark (&:is(.dark, .dark *));
@@ -341,9 +341,9 @@
 }
 
 
-/* ── Glimpse ─────────────────────────────────────────────────────────── */
+/* ── Pudu ─────────────────────────────────────────────────────────── */
 
-/* T3 Code's controls are mobile-first with `sm:` desktop sizes. Glimpse is
+/* T3 Code's controls are mobile-first with `sm:` desktop sizes. Pudu is
    desktop-only, and its 360px launcher should still get the desktop sizes. */
 @theme {
   --breakpoint-sm: 0px;

@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 
-import type { SharePresetId } from "@glimpse/contracts";
+import type { SharePresetId } from "@pudu/contracts";
 
 // avconvert presets fit the video inside the box, keeping its aspect ratio.
 export const AV_PRESETS: Record<SharePresetId, { avPreset: string; box: { width: number; height: number } }> = {

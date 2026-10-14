@@ -33,7 +33,7 @@ for (let attempt = 0; attempt < 100; attempt++) {
 
 const electron = spawn(String(electronPath), [desktop], {
   stdio: "inherit",
-  env: { ...process.env, GLIMPSE_DEV_URL: DEV_URL },
+  env: { ...process.env, PUDU_DEV_URL: DEV_URL },
 });
 electron.on("exit", (code) => {
   vite.kill();

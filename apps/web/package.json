@@ -1,5 +1,5 @@
 {
-  "name": "@glimpse/web",
+  "name": "@pudu/web",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
-    "@glimpse/contracts": "workspace:*",
+    "@pudu/contracts": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "lucide-react": "^1.57.0",
     "react": "^19.2.6",

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-import { DEFAULT_SETTINGS, type RecorderSettings } from "@glimpse/contracts";
+import { DEFAULT_SETTINGS, type RecorderSettings } from "@pudu/contracts";
 
 // Recorder settings persist as one JSON file in Electron's userData folder.
 export class SettingsStore {

@@ -1,6 +1,6 @@
 import { shell, systemPreferences } from "electron";
 
-import type { PermissionKind, PermissionStatus, Permissions } from "@glimpse/contracts";
+import type { PermissionKind, PermissionStatus, Permissions } from "@pudu/contracts";
 
 const SETTINGS_PANES: Record<PermissionKind, string> = {
   screen: "Privacy_ScreenCapture",

@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import { SHARE_PRESETS, type Recording, type SharePresetId } from "@glimpse/contracts";
+import { SHARE_PRESETS, type Recording, type SharePresetId } from "@pudu/contracts";
 
-import { glimpse, useRecorderState, useSystemTheme } from "../bridge";
+import { pudu, useRecorderState, useSystemTheme } from "../bridge";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -34,11 +34,11 @@ import { cn, formatBytes, formatDuration, formatRelative } from "../lib/utils";
 function useRecordings() {
   const [recordings, setRecordings] = useState<ReadonlyArray<Recording> | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
-  const refresh = useCallback(() => void glimpse.listRecordings().then(setRecordings), []);
+  const refresh = useCallback(() => void pudu.listRecordings().then(setRecordings), []);
   useEffect(() => {
     refresh();
     // Main pings after a save (with the new id) or any rename/delete.
-    return glimpse.onLibraryChanged((id) => {
+    return pudu.onLibraryChanged((id) => {
       refresh();
       if (id) setFocusId(id);
     });
@@ -92,7 +92,7 @@ function Sidebar({ count, onNew, onHome }: { count: number; onNew: () => void; o
         <span className="relative flex size-4.5 items-center justify-center rounded-full border-2 border-foreground/85">
           <span className="size-1.5 rounded-full bg-red-500" />
         </span>
-        <span className="font-semibold text-sm tracking-tight">Glimpse</span>
+        <span className="font-semibold text-sm tracking-tight">Pudu</span>
       </div>
       <div className="flex flex-col gap-3 px-[var(--sidebar-content-inset)] pt-1">
         <Button className="w-full justify-between" onClick={onNew} disabled={busy}>
@@ -117,7 +117,7 @@ function Sidebar({ count, onNew, onHome }: { count: number; onNew: () => void; o
         </nav>
       </div>
       <div className="mt-auto px-4 py-4 text-[11px] leading-relaxed text-sidebar-muted-foreground">
-        Recordings are saved to <span className="font-medium text-sidebar-foreground">Movies/Glimpse</span>.
+        Recordings are saved to <span className="font-medium text-sidebar-foreground">Movies/Pudu</span>.
       </div>
     </aside>
   );
@@ -186,7 +186,7 @@ function CompressMenu({ recording }: { recording: Recording }) {
   const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   useEffect(
-    () => glimpse.onCompressProgress((update) => update.id === recording.id && setProgress(update.progress)),
+    () => pudu.onCompressProgress((update) => update.id === recording.id && setProgress(update.progress)),
     [recording.id],
   );
 
@@ -194,7 +194,7 @@ function CompressMenu({ recording }: { recording: Recording }) {
     setError(null);
     setProgress(0);
     try {
-      await glimpse.compressRecording(recording.id, preset);
+      await pudu.compressRecording(recording.id, preset);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
@@ -254,7 +254,7 @@ function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: 
   }, [copied]);
 
   const saveTitle = () => {
-    if (title.trim() && title !== recording.title) void glimpse.renameRecording(recording.id, title);
+    if (title.trim() && title !== recording.title) void pudu.renameRecording(recording.id, title);
     else setTitle(recording.title);
   };
 
@@ -297,15 +297,15 @@ function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: 
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <CompressMenu recording={recording} />
-          <Button variant="outline" onClick={() => void glimpse.copyRecording(recording.id).then(() => setCopied(true))}>
+          <Button variant="outline" onClick={() => void pudu.copyRecording(recording.id).then(() => setCopied(true))}>
             <CopyIcon />
             {copied ? "Copied" : "Copy video"}
           </Button>
-          <Button onClick={() => void glimpse.shareRecording(recording.id)}>
+          <Button onClick={() => void pudu.shareRecording(recording.id)}>
             <ShareIcon />
             Share
           </Button>
-          <IconAction label="Show in Finder" onClick={() => void glimpse.revealRecording(recording.id)}>
+          <IconAction label="Show in Finder" onClick={() => void pudu.revealRecording(recording.id)}>
             <FolderOpenIcon />
           </IconAction>
           <IconAction label="Delete" destructive onClick={() => setConfirmingDelete(true)}>
@@ -326,14 +326,14 @@ function DeleteDialog({ recording, onDeleted }: { recording: Recording; onDelete
       <AlertDialogHeader>
         <AlertDialogTitle>Delete this recording?</AlertDialogTitle>
         <AlertDialogDescription>
-          “{recording.title}” will be removed from Movies/Glimpse. This can't be undone.
+          “{recording.title}” will be removed from Movies/Pudu. This can't be undone.
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
         <AlertDialogClose render={<Button variant="outline" />}>Cancel</AlertDialogClose>
         <AlertDialogClose
           render={<Button variant="destructive" />}
-          onClick={() => void glimpse.deleteRecording(recording.id).then(onDeleted)}
+          onClick={() => void pudu.deleteRecording(recording.id).then(onDeleted)}
         >
           Delete
         </AlertDialogClose>
@@ -352,7 +352,7 @@ export function Library() {
       recordings?.filter((recording) => recording.title.toLowerCase().includes(query.trim().toLowerCase())) ?? [],
     [recordings, query],
   );
-  const openLauncher = () => void glimpse.openLauncher();
+  const openLauncher = () => void pudu.openLauncher();
 
   return (
     <TooltipProvider delay={400}>

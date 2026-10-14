@@ -1,5 +1,5 @@
 {
-  "name": "@glimpse/contracts",
+  "name": "@pudu/contracts",
   "private": true,
   "type": "module",
   "exports": { ".": "./src/index.ts" },

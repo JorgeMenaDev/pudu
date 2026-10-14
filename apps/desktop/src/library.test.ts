@@ -9,7 +9,7 @@ let dir: string;
 let library: Library;
 
 beforeEach(async () => {
-  dir = await fs.mkdtemp(path.join(os.tmpdir(), "glimpse-library-"));
+  dir = await fs.mkdtemp(path.join(os.tmpdir(), "pudu-library-"));
   library = new Library(dir);
 });
 
@@ -37,8 +37,8 @@ describe("Library", () => {
 
     const recordings = await library.list();
     expect(recordings.map((recording) => recording.id)).toEqual(["b", "a"]);
-    expect(recordings[0]?.videoUrl).toStartWith("glimpse-media://media/b.webm?v=");
-    expect(recordings[1]?.thumbnailUrl).toStartWith("glimpse-media://media/a.jpg?v=");
+    expect(recordings[0]?.videoUrl).toStartWith("pudu-media://media/b.webm?v=");
+    expect(recordings[1]?.thumbnailUrl).toStartWith("pudu-media://media/a.jpg?v=");
     expect(recordings[1]).toMatchObject({ durationMs: 4200, width: 1920, sizeBytes: 11 });
     expect(await fs.readdir(dir)).not.toContain(".a.part");
   });

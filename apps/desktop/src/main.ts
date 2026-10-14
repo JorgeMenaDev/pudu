@@ -24,7 +24,7 @@ import {
   type RecorderSettings,
   type RecorderState,
   type SharePresetId,
-} from "@glimpse/contracts";
+} from "@pudu/contracts";
 
 import { Library } from "./library.ts";
 import { handleMediaRequest } from "./mediaProtocol.ts";
@@ -96,7 +96,7 @@ function idleMenu(studio: Studio): Menu {
     { label: "New recording", accelerator: SHORTCUTS.startStop, click: () => studio.openLauncher() },
     { label: "Open library", click: () => studio.showLibrary() },
     { type: "separator" },
-    { role: "quit", label: "Quit Glimpse" },
+    { role: "quit", label: "Quit Pudu" },
   ]);
 }
 
@@ -177,8 +177,8 @@ function registerIpc(studio: Studio, library: Library): void {
 }
 
 void app.whenReady().then(() => {
-  // GLIMPSE_LIBRARY_DIR points the app at another folder, for demos and screenshots.
-  const library = new Library(process.env.GLIMPSE_LIBRARY_DIR ?? path.join(app.getPath("videos"), "Glimpse"));
+  // PUDU_LIBRARY_DIR points the app at another folder, for demos and screenshots.
+  const library = new Library(process.env.PUDU_LIBRARY_DIR ?? path.join(app.getPath("videos"), "Pudu"));
   const studio = new Studio(new SettingsStore(app.getPath("userData")), library, syncTray);
 
   protocol.handle(MEDIA_SCHEME, (request) => handleMediaRequest(library, request));
@@ -186,7 +186,7 @@ void app.whenReady().then(() => {
   registerShortcuts(studio);
 
   tray = new Tray(createTrayIcon());
-  tray.setToolTip("Glimpse");
+  tray.setToolTip("Pudu");
   // Like Loom: a click stops a take or toggles the launcher; right-click has the rest.
   tray.on("click", () => {
     if (studio.isBusy) studio.stop();
@@ -204,6 +204,6 @@ void app.whenReady().then(() => {
   studio.showLibrary();
 });
 
-// Glimpse lives in the menu bar; closing the library keeps it running.
+// Pudu lives in the menu bar; closing the library keeps it running.
 app.on("window-all-closed", () => {});
 app.on("will-quit", () => globalShortcut.unregisterAll());

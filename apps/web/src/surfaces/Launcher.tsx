@@ -17,9 +17,9 @@ import type {
   PermissionKind,
   Permissions,
   RecorderSettings,
-} from "@glimpse/contracts";
+} from "@pudu/contracts";
 
-import { glimpse, useRecorderState, useSystemTheme } from "../bridge";
+import { pudu, useRecorderState, useSystemTheme } from "../bridge";
 import { Button } from "../components/ui/button";
 import { Kbd, KbdGroup } from "../components/ui/kbd";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -30,7 +30,7 @@ import { cn } from "../lib/utils";
 
 function useSources() {
   const [sources, setSources] = useState<ReadonlyArray<CaptureSource> | null>(null);
-  const refresh = useCallback(() => void glimpse.listSources().then(setSources), []);
+  const refresh = useCallback(() => void pudu.listSources().then(setSources), []);
   useEffect(() => {
     refresh();
     window.addEventListener("focus", refresh);
@@ -41,7 +41,7 @@ function useSources() {
 
 function usePermissions() {
   const [permissions, setPermissions] = useState<Permissions | null>(null);
-  const refresh = useCallback(() => void glimpse.getPermissions().then(setPermissions), []);
+  const refresh = useCallback(() => void pudu.getPermissions().then(setPermissions), []);
   useEffect(() => {
     refresh();
     window.addEventListener("focus", refresh);
@@ -214,9 +214,9 @@ function LevelMeter({ level }: { level: number }) {
 
 function PermissionCallout({ kind, onFix }: { kind: PermissionKind; onFix: () => void }) {
   const copy: Record<PermissionKind, string> = {
-    screen: "Allow Screen Recording for Glimpse in System Settings, then reopen this panel.",
-    camera: "Glimpse can't use your camera yet.",
-    microphone: "Glimpse can't use your microphone yet.",
+    screen: "Allow Screen Recording for Pudu in System Settings, then reopen this panel.",
+    camera: "Pudu can't use your camera yet.",
+    microphone: "Pudu can't use your microphone yet.",
   };
   return (
     <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-surface px-2.5 py-2 text-xs text-warning-foreground">
@@ -240,9 +240,9 @@ export function Launcher() {
   const micLevel = useMicLevel(Boolean(settings?.micEnabled && permissions?.microphone === "granted"), settings?.micDeviceId ?? null);
   const [tab, setTab] = useState<CaptureSourceKind>("screen");
 
-  const update = (patch: Partial<RecorderSettings>) => void glimpse.updateSettings(patch);
+  const update = (patch: Partial<RecorderSettings>) => void pudu.updateSettings(patch);
   const ask = async (kind: PermissionKind) => {
-    await glimpse.requestPermission(kind);
+    await pudu.requestPermission(kind);
     refreshPermissions();
   };
 
@@ -268,8 +268,8 @@ export function Launcher() {
     : [];
 
   const start = async () => {
-    if (selectedId !== settings?.sourceId) await glimpse.updateSettings({ sourceId: selectedId });
-    await glimpse.start();
+    if (selectedId !== settings?.sourceId) await pudu.updateSettings({ sourceId: selectedId });
+    await pudu.start();
   };
 
   return (
@@ -279,20 +279,20 @@ export function Launcher() {
           <span className="relative flex size-5 items-center justify-center rounded-full border-2 border-foreground/85">
             <span className="size-2 rounded-full bg-red-500" />
           </span>
-          <span className="font-semibold text-sm tracking-tight">Glimpse</span>
+          <span className="font-semibold text-sm tracking-tight">Pudu</span>
           <div className="no-drag ms-auto flex items-center gap-0.5">
             <Button
               variant="ghost"
               size="icon-sm"
               title="Open library"
               onClick={() => {
-                void glimpse.hideLauncher();
-                void glimpse.openLibrary();
+                void pudu.hideLauncher();
+                void pudu.openLibrary();
               }}
             >
               <LibraryBigIcon />
             </Button>
-            <Button variant="ghost" size="icon-sm" title="Close" onClick={() => void glimpse.hideLauncher()}>
+            <Button variant="ghost" size="icon-sm" title="Close" onClick={() => void pudu.hideLauncher()}>
               <XIcon />
             </Button>
           </div>
@@ -326,7 +326,7 @@ export function Launcher() {
               <div className="flex h-full items-center justify-center px-6 text-center text-xs text-muted-foreground">
                 {permissions?.screen === "granted"
                   ? "No windows to record."
-                  : "Glimpse needs Screen Recording access to show your screens."}
+                  : "Pudu needs Screen Recording access to show your screens."}
               </div>
             ) : (
               <div className={cn("grid gap-1", tab === "window" && "grid-cols-2")}>
@@ -394,7 +394,7 @@ export function Launcher() {
             <PermissionCallout
               key={kind}
               kind={kind}
-              onFix={() => void (kind === "screen" ? glimpse.openPermissionSettings(kind) : ask(kind))}
+              onFix={() => void (kind === "screen" ? pudu.openPermissionSettings(kind) : ask(kind))}
             />
           ))}
 

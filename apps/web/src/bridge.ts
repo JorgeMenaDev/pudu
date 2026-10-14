@@ -1,22 +1,22 @@
 import { useEffect, useState } from "react";
 
-import type { GlimpseBridge, RecorderState } from "@glimpse/contracts";
+import type { PuduBridge, RecorderState } from "@pudu/contracts";
 
 declare global {
   interface Window {
-    readonly glimpse: GlimpseBridge;
+    readonly pudu: PuduBridge;
   }
 }
 
-export const glimpse = window.glimpse;
+export const pudu = window.pudu;
 
 // Live recorder state from the main process; null until the first read lands.
 export function useRecorderState(): RecorderState | null {
   const [state, setState] = useState<RecorderState | null>(null);
   useEffect(() => {
     let active = true;
-    void glimpse.getState().then((initial) => active && setState(initial));
-    const unsubscribe = glimpse.onState(setState);
+    void pudu.getState().then((initial) => active && setState(initial));
+    const unsubscribe = pudu.onState(setState);
     return () => {
       active = false;
       unsubscribe();

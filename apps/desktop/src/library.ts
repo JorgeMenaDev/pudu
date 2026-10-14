@@ -1,7 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { MEDIA_SCHEME, type Recording, type SharePresetId } from "@glimpse/contracts";
+import { MEDIA_SCHEME, type Recording, type SharePresetId } from "@pudu/contracts";
 
 import { AV_PRESETS, fitWithin, runAvconvert } from "./compress.ts";
 

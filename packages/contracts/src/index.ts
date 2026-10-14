@@ -1,6 +1,6 @@
 // Shared types between the Electron main process, the preload bridge and the
 // React renderer. The main process owns all recording state; renderers read it
-// through `GlimpseBridge` and send intents back.
+// through `PuduBridge` and send intents back.
 
 export type CaptureSourceKind = "screen" | "window";
 
@@ -111,8 +111,8 @@ export type Surface = "library" | "launcher" | "bubble" | "controls" | "countdow
 
 export type Unsubscribe = () => void;
 
-// Exposed on `window.glimpse` by the preload script.
-export interface GlimpseBridge {
+// Exposed on `window.pudu` by the preload script.
+export interface PuduBridge {
   readonly platform: string;
 
   getState(): Promise<RecorderState>;
@@ -158,37 +158,37 @@ export interface GlimpseBridge {
 }
 
 export const IPC = {
-  state: "glimpse:state",
-  getState: "glimpse:get-state",
-  updateSettings: "glimpse:update-settings",
-  listSources: "glimpse:list-sources",
-  getPermissions: "glimpse:get-permissions",
-  requestPermission: "glimpse:request-permission",
-  openPermissionSettings: "glimpse:open-permission-settings",
-  openLauncher: "glimpse:open-launcher",
-  openLibrary: "glimpse:open-library",
-  hideLauncher: "glimpse:hide-launcher",
-  start: "glimpse:start",
-  stop: "glimpse:stop",
-  togglePause: "glimpse:toggle-pause",
-  restart: "glimpse:restart",
-  cancel: "glimpse:cancel",
-  skipCountdown: "glimpse:skip-countdown",
-  moveWindowBy: "glimpse:move-window-by",
-  listRecordings: "glimpse:list-recordings",
-  renameRecording: "glimpse:rename-recording",
-  deleteRecording: "glimpse:delete-recording",
-  revealRecording: "glimpse:reveal-recording",
-  shareRecording: "glimpse:share-recording",
-  copyRecording: "glimpse:copy-recording",
-  compressRecording: "glimpse:compress-recording",
-  compressProgress: "glimpse:compress-progress",
-  libraryChanged: "glimpse:library-changed",
-  recorderCommand: "glimpse:recorder-command",
-  recorderReady: "glimpse:recorder-ready",
-  recorderChunk: "glimpse:recorder-chunk",
-  recorderFinished: "glimpse:recorder-finished",
-  recorderFailed: "glimpse:recorder-failed",
+  state: "pudu:state",
+  getState: "pudu:get-state",
+  updateSettings: "pudu:update-settings",
+  listSources: "pudu:list-sources",
+  getPermissions: "pudu:get-permissions",
+  requestPermission: "pudu:request-permission",
+  openPermissionSettings: "pudu:open-permission-settings",
+  openLauncher: "pudu:open-launcher",
+  openLibrary: "pudu:open-library",
+  hideLauncher: "pudu:hide-launcher",
+  start: "pudu:start",
+  stop: "pudu:stop",
+  togglePause: "pudu:toggle-pause",
+  restart: "pudu:restart",
+  cancel: "pudu:cancel",
+  skipCountdown: "pudu:skip-countdown",
+  moveWindowBy: "pudu:move-window-by",
+  listRecordings: "pudu:list-recordings",
+  renameRecording: "pudu:rename-recording",
+  deleteRecording: "pudu:delete-recording",
+  revealRecording: "pudu:reveal-recording",
+  shareRecording: "pudu:share-recording",
+  copyRecording: "pudu:copy-recording",
+  compressRecording: "pudu:compress-recording",
+  compressProgress: "pudu:compress-progress",
+  libraryChanged: "pudu:library-changed",
+  recorderCommand: "pudu:recorder-command",
+  recorderReady: "pudu:recorder-ready",
+  recorderChunk: "pudu:recorder-chunk",
+  recorderFinished: "pudu:recorder-finished",
+  recorderFailed: "pudu:recorder-failed",
 } as const;
 
-export const MEDIA_SCHEME = "glimpse-media";
+export const MEDIA_SCHEME = "pudu-media";

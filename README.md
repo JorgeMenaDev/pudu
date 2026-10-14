@@ -1,13 +1,14 @@
 <div align="center">
 
-<img src="assets/icon.png" width="128" height="128" alt="Glimpse icon" />
+<img src="assets/icon.png" width="128" height="128" alt="Pudu icon" />
 
-# Glimpse
+# Pudu
 
 **Record your screen with your face in a bubble. Share it anywhere.**
 
 A small, fast, open-source Loom for macOS. No account, no upload, no subscription.<br />
-Your videos stay on your Mac as plain MP4 files.
+Your videos stay on your Mac as plain MP4 files.<br />
+<sub>Named after the pudú, the world's smallest deer, from the forests of southern Chile.</sub>
 
 [![macOS 14+](https://img.shields.io/badge/macOS-14%2B-000?logo=apple&logoColor=white)](#install)
 [![Apple silicon](https://img.shields.io/badge/Apple%20silicon-arm64-555)](#install)
@@ -15,26 +16,26 @@ Your videos stay on your Mac as plain MP4 files.
 [![Electron 41](https://img.shields.io/badge/Electron-41-47848f?logo=electron&logoColor=white)](https://www.electronjs.org)
 [![React 19](https://img.shields.io/badge/React-19-149eca?logo=react&logoColor=white)](https://react.dev)
 
-[**Download**](https://github.com/JorgeMenaDev/glimpse/releases/latest) · [Features](#features) · [Shortcuts](#keyboard-shortcuts) · [Build from source](#build-from-source)
+[**Download**](https://github.com/JorgeMenaDev/pudu/releases/latest) · [Features](#features) · [Shortcuts](#keyboard-shortcuts) · [Build from source](#build-from-source)
 
 <br />
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/detail-light.png" />
-  <img src="assets/screenshots/detail-dark.png" alt="A recording open in the Glimpse library" width="900" />
+  <img src="assets/screenshots/detail-dark.png" alt="A recording open in the Pudu library" width="900" />
 </picture>
 
 </div>
 
-## Why Glimpse
+## Why Pudu
 
 You want to show a teammate a bug, walk through a pull request or send a quick update. A video says it faster than a document. But most screen recorders want an account, upload everything to their cloud and charge per seat.
 
-Glimpse does the useful part and nothing else:
+Pudu does the useful part and nothing else:
 
 - **One shortcut to start.** Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>L</kbd> from any app, talk, then press it again.
 - **You, in a bubble.** Your camera floats over the screen, so people see who is talking.
-- **A file you own.** Every take is an H.264 MP4 in `~/Movies/Glimpse`. Drop it into Teams, Slack, Jira, email or Google Drive.
+- **A file you own.** Every take is an H.264 MP4 in `~/Movies/Pudu`. Drop it into Teams, Slack, Jira, email or Google Drive.
 - **Small enough to send.** One click makes a copy that fits in an email.
 
 ## Features
@@ -57,7 +58,7 @@ A small floating toolbar has **stop**, **pause**, **restart** and **delete**, wi
 
 <picture>
   <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/library-light.png" />
-  <img src="assets/screenshots/library-dark.png" alt="The Glimpse library" width="900" />
+  <img src="assets/screenshots/library-dark.png" alt="The Pudu library" width="900" />
 </picture>
 
 When you stop, the take opens in your library, ready to watch. From there you can:
@@ -99,32 +100,32 @@ While recording, click the menu bar icon to stop. Right-click it for the other a
 
 ## Install
 
-1. Download the latest `Glimpse-…-arm64.dmg` from [Releases](https://github.com/JorgeMenaDev/glimpse/releases/latest).
-2. Open it and drag **Glimpse** to **Applications**.
-3. The app is not notarized by Apple yet. The first time, right-click **Glimpse** in Applications and choose **Open**. If macOS still refuses, run:
+1. Download the latest `Pudu-…-arm64.dmg` from [Releases](https://github.com/JorgeMenaDev/pudu/releases/latest).
+2. Open it and drag **Pudu** to **Applications**.
+3. The app is not notarized by Apple yet. The first time, right-click **Pudu** in Applications and choose **Open**. If macOS still refuses, run:
 
    ```sh
-   xattr -dr com.apple.quarantine /Applications/Glimpse.app
+   xattr -dr com.apple.quarantine /Applications/Pudu.app
    ```
 
-4. Allow **Screen Recording**, **Camera** and **Microphone** when macOS asks. For Screen Recording, macOS asks you to quit and reopen Glimpse.
+4. Allow **Screen Recording**, **Camera** and **Microphone** when macOS asks. For Screen Recording, macOS asks you to quit and reopen Pudu.
 
-Glimpse needs macOS 14 or later on Apple silicon.
+Pudu needs macOS 14 or later on Apple silicon.
 
 ## Privacy
 
-Glimpse has no account, no server, no analytics and no network calls. Recordings are written to `~/Movies/Glimpse` and never leave your Mac unless you share them.
+Pudu has no account, no server, no analytics and no network calls. Recordings are written to `~/Movies/Pudu` and never leave your Mac unless you share them.
 
 ## Build from source
 
 You need [Bun](https://bun.sh) 1.2 or later and Xcode command line tools.
 
 ```sh
-git clone https://github.com/JorgeMenaDev/glimpse.git
-cd glimpse
+git clone https://github.com/JorgeMenaDev/pudu.git
+cd pudu
 bun install
 bun run dev      # Vite + Electron; the interface hot-reloads
-bun run dist     # builds apps/desktop/release/Glimpse-<version>-arm64.dmg
+bun run dist     # builds apps/desktop/release/Pudu-<version>-arm64.dmg
 ```
 
 Other scripts: `bun run typecheck`, `bun test`, `bun run build`, `bun run start`.
@@ -133,7 +134,7 @@ Other scripts: `bun run typecheck`, `bun test`, `bun run build`, `bun run start`
 
 ## How it works
 
-Glimpse follows the architecture of [T3 Code](https://github.com/pingdotgg/t3code): an Electron shell, one React renderer and a shared contracts package.
+Pudu follows the architecture of [T3 Code](https://github.com/pingdotgg/t3code): an Electron shell, one React renderer and a shared contracts package.
 
 ```
 packages/contracts   Types and IPC channel names shared by every process
@@ -142,8 +143,8 @@ apps/desktop         Electron main process
   windows.ts           Window factories: library, launcher, bubble, toolbar, countdown, recorder
   library.ts           Recordings on disk: <id>.mp4 + <id>.jpg + <id>.json
   compress.ts          Share copies through macOS's built-in avconvert
-  mediaProtocol.ts     glimpse-media:// with byte ranges, so the player can seek
-  preload.ts           The window.glimpse bridge
+  mediaProtocol.ts     pudu-media:// with byte ranges, so the player can seek
+  preload.ts           The window.pudu bridge
 apps/web             React 19 + Vite + Tailwind 4; one bundle for every window (#/surface)
   surfaces/            Library, Launcher, Bubble, Controls, Countdown, Recorder (hidden)
   components/ui/       T3 Code's Base UI component kit
@@ -172,8 +173,8 @@ Issues and pull requests are welcome.
 
 ## Credits
 
-- [T3 Code](https://github.com/pingdotgg/t3code) by T3 Tools Inc. Glimpse borrows its architecture, theme and UI components (MIT; see [NOTICE](NOTICE)).
-- [Loom](https://www.loom.com) for showing how good async video can feel. Glimpse is an independent project and is not affiliated with Loom or Atlassian.
+- [T3 Code](https://github.com/pingdotgg/t3code) by T3 Tools Inc. Pudu borrows its architecture, theme and UI components (MIT; see [NOTICE](NOTICE)).
+- [Loom](https://www.loom.com) for showing how good async video can feel. Pudu is an independent project and is not affiliated with Loom or Atlassian.
 
 ## Licence
 

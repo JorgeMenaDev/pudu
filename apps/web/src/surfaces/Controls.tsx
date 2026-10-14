@@ -1,9 +1,9 @@
 import { CheckIcon, GripHorizontalIcon, PauseIcon, PlayIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useState, type ComponentProps } from "react";
 
-import { elapsedMs } from "@glimpse/contracts";
+import { elapsedMs } from "@pudu/contracts";
 
-import { glimpse, useNow, useRecorderState } from "../bridge";
+import { pudu, useNow, useRecorderState } from "../bridge";
 import { cn, formatDuration } from "../lib/utils";
 
 function HudButton({ className, ...props }: ComponentProps<"button">) {
@@ -43,7 +43,7 @@ export function Controls() {
         <button
           type="button"
           title="Stop and save (⌘⇧L)"
-          onClick={() => void glimpse.stop()}
+          onClick={() => void pudu.stop()}
           className="no-drag group flex size-9 cursor-pointer items-center justify-center rounded-full bg-red-500 shadow-[0_0_0_3px_rgb(239_68_68/25%)] transition-transform hover:scale-105 active:scale-95"
         >
           <span className="size-3 rounded-[3px] bg-white" />
@@ -67,16 +67,16 @@ export function Controls() {
         <HudButton
           title={paused ? "Resume (⌥⇧P)" : "Pause (⌥⇧P)"}
           disabled={!rolling}
-          onClick={() => void glimpse.togglePause()}
+          onClick={() => void pudu.togglePause()}
         >
           {paused ? <PlayIcon /> : <PauseIcon />}
         </HudButton>
-        <HudButton title="Restart (⌘⇧R)" disabled={!rolling} onClick={() => void glimpse.restart()}>
+        <HudButton title="Restart (⌘⇧R)" disabled={!rolling} onClick={() => void pudu.restart()}>
           <RotateCcwIcon />
         </HudButton>
         <HudButton
           title={confirmingDelete ? "Click again to delete" : "Cancel and delete (⌥⇧C)"}
-          onClick={() => (confirmingDelete ? void glimpse.cancel() : setConfirmingDelete(true))}
+          onClick={() => (confirmingDelete ? void pudu.cancel() : setConfirmingDelete(true))}
           className={cn(confirmingDelete && "bg-red-500/90 text-white hover:bg-red-500")}
         >
           {confirmingDelete ? <CheckIcon /> : <Trash2Icon />}

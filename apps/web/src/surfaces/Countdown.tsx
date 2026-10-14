@@ -1,4 +1,4 @@
-import { glimpse, useRecorderState } from "../bridge";
+import { pudu, useRecorderState } from "../bridge";
 
 // 3-2-1 over the recorded display. Clicking it starts right away.
 export function Countdown() {
@@ -8,7 +8,7 @@ export function Countdown() {
   return (
     <button
       type="button"
-      onClick={() => void glimpse.skipCountdown()}
+      onClick={() => void pudu.skipCountdown()}
       className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-3"
     >
       <div className="hud-glass flex size-40 items-center justify-center rounded-full">

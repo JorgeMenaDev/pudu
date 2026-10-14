@@ -26,7 +26,7 @@ export function parseRange(header: string | null, size: number): { start: number
   return start <= end && start < size ? { start, end } : null;
 }
 
-// Serves glimpse-media://media/<file> from the library folder.
+// Serves pudu-media://media/<file> from the library folder.
 export async function handleMediaRequest(library: Library, request: Request): Promise<Response> {
   const fileName = decodeURIComponent(new URL(request.url).pathname.replace(/^\//, ""));
   const filePath = library.resolveMediaFile(fileName);

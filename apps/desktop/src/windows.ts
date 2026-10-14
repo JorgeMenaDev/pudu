@@ -2,10 +2,10 @@ import * as path from "node:path";
 
 import { app, BrowserWindow, nativeTheme, screen, type Display, type Rectangle } from "electron";
 
-import { BUBBLE_DIAMETER, type BubbleSize, type Surface } from "@glimpse/contracts";
+import { BUBBLE_DIAMETER, type BubbleSize, type Surface } from "@pudu/contracts";
 
 // Every surface is the same React bundle; the hash picks the screen to render.
-const DEV_URL = process.env.GLIMPSE_DEV_URL;
+const DEV_URL = process.env.PUDU_DEV_URL;
 // Resolved from the app root: the bundler bakes `__dirname` in at build time.
 const appFile = (relative: string) => path.join(app.getAppPath(), relative);
 
@@ -54,7 +54,7 @@ export function createLibraryWindow(): BrowserWindow {
     minWidth: 860,
     minHeight: 560,
     show: false,
-    title: "Glimpse",
+    title: "Pudu",
     titleBarStyle: "hiddenInset",
     trafficLightPosition: { x: 18, y: 18 },
     backgroundColor: background(),

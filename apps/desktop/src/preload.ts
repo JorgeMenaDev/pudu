@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
-import { IPC, type GlimpseBridge } from "@glimpse/contracts";
+import { IPC, type PuduBridge } from "@pudu/contracts";
 
 function subscribe<T>(channel: string, listener: (value: T) => void) {
   const wrapped = (_event: IpcRendererEvent, value: T) => listener(value);
@@ -8,7 +8,7 @@ function subscribe<T>(channel: string, listener: (value: T) => void) {
   return () => void ipcRenderer.removeListener(channel, wrapped);
 }
 
-const bridge: GlimpseBridge = {
+const bridge: PuduBridge = {
   platform: process.platform,
 
   getState: () => ipcRenderer.invoke(IPC.getState),
@@ -51,4 +51,4 @@ const bridge: GlimpseBridge = {
   },
 };
 
-contextBridge.exposeInMainWorld("glimpse", bridge);
+contextBridge.exposeInMainWorld("pudu", bridge);

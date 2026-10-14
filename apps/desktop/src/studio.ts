@@ -16,7 +16,7 @@ import {
   type RecorderResult,
   type RecorderSettings,
   type RecorderState,
-} from "@glimpse/contracts";
+} from "@pudu/contracts";
 
 import { Library, newRecordingId } from "./library.ts";
 import type { SettingsStore } from "./settings.ts";

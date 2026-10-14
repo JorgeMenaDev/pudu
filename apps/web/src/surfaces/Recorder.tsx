@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 
-import type { CaptureTarget, RecorderSettings } from "@glimpse/contracts";
+import type { CaptureTarget, RecorderSettings } from "@pudu/contracts";
 
-import { glimpse } from "../bridge";
+import { pudu } from "../bridge";
 
 // H.264 MP4 first: it plays everywhere and Chromium encodes it in hardware on
 // Apple silicon. WebM is the fallback.
@@ -64,7 +64,7 @@ async function grabThumbnail(stream: MediaStream): Promise<ArrayBuffer | null> {
 
 // One take, end to end. Lives in a hidden window that main destroys afterwards.
 async function runTake(): Promise<void> {
-  const state = await glimpse.getState();
+  const state = await pudu.getState();
   if (!state.target) throw new Error("Nothing selected to record.");
   const display = await navigator.mediaDevices.getUserMedia(desktopConstraints(state.target));
   const mic = await micStream(state.settings).catch((error: unknown) => {
@@ -86,7 +86,7 @@ async function runTake(): Promise<void> {
   let discarded = false;
   recorder.ondataavailable = (event) => {
     if (discarded || event.data.size === 0) return;
-    pending = pending.then(async () => glimpse.recorder.chunk(await event.data.arrayBuffer()));
+    pending = pending.then(async () => pudu.recorder.chunk(await event.data.arrayBuffer()));
   };
 
   let thumbnail: Promise<ArrayBuffer | null> = Promise.resolve(null);
@@ -94,7 +94,7 @@ async function runTake(): Promise<void> {
     await pending;
     const settings = display.getVideoTracks()[0]?.getSettings();
     if (!discarded) {
-      glimpse.recorder.finished({
+      pudu.recorder.finished({
         width: settings?.width ?? 0,
         height: settings?.height ?? 0,
         mimeType: recorder.mimeType || mimeType,
@@ -105,9 +105,9 @@ async function runTake(): Promise<void> {
   };
 
   // Closing the recorded window ends the capture; treat it as "stop".
-  display.getVideoTracks()[0]?.addEventListener("ended", () => void glimpse.stop());
+  display.getVideoTracks()[0]?.addEventListener("ended", () => void pudu.stop());
 
-  glimpse.recorder.onCommand((command) => {
+  pudu.recorder.onCommand((command) => {
     if (command === "begin" && recorder.state === "inactive") {
       recorder.start(1000);
       thumbnail = grabThumbnail(new MediaStream(display.getVideoTracks()));
@@ -121,7 +121,7 @@ async function runTake(): Promise<void> {
     }
   });
 
-  glimpse.recorder.ready();
+  pudu.recorder.ready();
 }
 
 // Module-level guard: StrictMode runs effects twice, a take must start once.
@@ -133,7 +133,7 @@ export function Recorder() {
     if (started) return;
     started = true;
     runTake().catch((error: unknown) =>
-      glimpse.recorder.failed(error instanceof Error ? error.message : String(error)),
+      pudu.recorder.failed(error instanceof Error ? error.message : String(error)),
     );
   }, []);
   return null;

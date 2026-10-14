@@ -1,7 +1,7 @@
 import { StrictMode, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 
-import type { Surface } from "@glimpse/contracts";
+import type { Surface } from "@pudu/contracts";
 
 import "./index.css";
 import { Bubble } from "./surfaces/Bubble";

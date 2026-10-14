@@ -1,9 +1,9 @@
 import { FlipHorizontal2Icon, VideoOffIcon } from "lucide-react";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 
-import { BUBBLE_DIAMETER, type BubbleSize } from "@glimpse/contracts";
+import { BUBBLE_DIAMETER, type BubbleSize } from "@pudu/contracts";
 
-import { glimpse, useRecorderState } from "../bridge";
+import { pudu, useRecorderState } from "../bridge";
 import { cn } from "../lib/utils";
 
 const SIZES: ReadonlyArray<{ size: BubbleSize; label: string; name: string }> = [
@@ -59,7 +59,7 @@ function useWindowDrag() {
       const dy = event.screenY - last.current.y;
       if (dx === 0 && dy === 0) return;
       last.current = { x: event.screenX, y: event.screenY };
-      glimpse.moveWindowBy(dx, dy);
+      pudu.moveWindowBy(dx, dy);
     },
     onPointerUp: () => (last.current = null),
   };
@@ -112,7 +112,7 @@ export function Bubble() {
                 key={size}
                 type="button"
                 title={`${name} bubble`}
-                onClick={() => void glimpse.updateSettings({ bubbleSize: size })}
+                onClick={() => void pudu.updateSettings({ bubbleSize: size })}
                 className={cn(
                   "flex size-6 cursor-pointer items-center justify-center rounded-full text-[11px] font-semibold transition-colors",
                   settings.bubbleSize === size ? "bg-white text-black" : "text-white/75 hover:bg-white/15",
@@ -124,7 +124,7 @@ export function Bubble() {
             <button
               type="button"
               title="Mirror camera"
-              onClick={() => void glimpse.updateSettings({ mirrorCamera: !settings.mirrorCamera })}
+              onClick={() => void pudu.updateSettings({ mirrorCamera: !settings.mirrorCamera })}
               className="flex size-6 cursor-pointer items-center justify-center rounded-full text-white/75 transition-colors hover:bg-white/15"
             >
               <FlipHorizontal2Icon className="size-3.5" />
