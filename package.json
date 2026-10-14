@@ -1,0 +1,18 @@
+{
+  "name": "glimpse",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun apps/desktop/scripts/dev.ts",
+    "build": "bun run --cwd apps/web build && bun run --cwd apps/desktop build",
+    "start": "bun run build && bun run --cwd apps/desktop start",
+    "dist": "bun run build && bun run --cwd apps/desktop dist",
+    "typecheck": "bun run --cwd packages/contracts typecheck && bun run --cwd apps/web typecheck && bun run --cwd apps/desktop typecheck",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.21",
+    "typescript": "^5.9.3"
+  }
+}

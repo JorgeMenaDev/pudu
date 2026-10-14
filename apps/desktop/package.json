@@ -1,0 +1,35 @@
+{
+  "name": "@glimpse/desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Glimpse: record your screen with your camera in a bubble.",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "build": "rm -rf dist-electron dist-renderer && bun build src/main.ts --outfile dist-electron/main.cjs --target node --format cjs --external electron && bun build src/preload.ts --outfile dist-electron/preload.cjs --target node --format cjs --external electron && cp -R ../web/dist dist-renderer",
+    "start": "electron .",
+    "dist": "electron-builder --mac --arm64",
+    "typecheck": "tsc -p ."
+  },
+  "dependencies": {
+    "@glimpse/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "electron": "41.10.7",
+    "electron-builder": "26.15.3"
+  },
+  "build": {
+    "appId": "com.andesphere.glimpse",
+    "productName": "Glimpse",
+    "files": ["dist-electron/**", "dist-renderer/**", "package.json"],
+    "directories": { "output": "release" },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": "dmg",
+      "extendInfo": {
+        "NSCameraUsageDescription": "Glimpse shows your camera in a bubble while you record.",
+        "NSMicrophoneUsageDescription": "Glimpse records your voice with your screen."
+      }
+    }
+  }
+}
