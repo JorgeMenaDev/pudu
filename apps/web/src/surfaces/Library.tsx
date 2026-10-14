@@ -6,11 +6,12 @@ import {
   LibraryBigIcon,
   SearchIcon,
   ShareIcon,
+  ShrinkIcon,
   Trash2Icon,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
-import type { Recording } from "@glimpse/contracts";
+import { SHARE_PRESETS, type Recording, type SharePresetId } from "@glimpse/contracts";
 
 import { glimpse, useRecorderState, useSystemTheme } from "../bridge";
 import {
@@ -25,6 +26,8 @@ import {
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Kbd, KbdGroup } from "../components/ui/kbd";
+import { Menu, MenuGroup, MenuGroupLabel, MenuItem, MenuPopup, MenuTrigger } from "../components/ui/menu";
+import { Spinner } from "../components/ui/spinner";
 import { Tooltip, TooltipPopup, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip";
 import { cn, formatBytes, formatDuration, formatRelative } from "../lib/utils";
 
@@ -178,6 +181,67 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   );
 }
 
+// Makes a smaller copy for Teams, Jira or email. The copy opens when ready.
+function CompressMenu({ recording }: { recording: Recording }) {
+  const [progress, setProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(
+    () => glimpse.onCompressProgress((update) => update.id === recording.id && setProgress(update.progress)),
+    [recording.id],
+  );
+
+  const compress = async (preset: SharePresetId) => {
+    setError(null);
+    setProgress(0);
+    try {
+      await glimpse.compressRecording(recording.id, preset);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setProgress(null);
+    }
+  };
+
+  if (progress !== null) {
+    return (
+      <Button variant="outline" disabled className="tabular-nums">
+        <Spinner />
+        Compressing… {Math.round(progress * 100)}%
+      </Button>
+    );
+  }
+  const estimateBytes = (mbps: number) => ((recording.durationMs / 1000) * mbps * 1_000_000) / 8;
+  // Only offer sizes that would actually shrink this file.
+  const presets = SHARE_PRESETS.filter((preset) => estimateBytes(preset.approxMbps) < recording.sizeBytes * 0.8);
+  return (
+    <Menu>
+      <MenuTrigger render={<Button variant="outline" title={error ?? undefined} />}>
+        <ShrinkIcon />
+        {error ? "Compress failed" : "Compress"}
+      </MenuTrigger>
+      <MenuPopup align="end" className="w-72">
+        <MenuGroup>
+          <MenuGroupLabel>Make a smaller copy · now {formatBytes(recording.sizeBytes)}</MenuGroupLabel>
+          {presets.length === 0 && (
+            <MenuItem disabled className="text-muted-foreground">
+              Already small enough to share
+            </MenuItem>
+          )}
+          {presets.map((preset) => (
+            <MenuItem key={preset.id} onClick={() => void compress(preset.id)} className="items-start py-1.5">
+              <div className="flex flex-1 flex-col">
+                <span>{preset.label}</span>
+                <span className="text-xs text-muted-foreground">{preset.detail}</span>
+              </div>
+              <span className="text-xs tabular-nums text-muted-foreground">≈ {formatBytes(estimateBytes(preset.approxMbps))}</span>
+            </MenuItem>
+          ))}
+        </MenuGroup>
+      </MenuPopup>
+    </Menu>
+  );
+}
+
 function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: () => void }) {
   const [title, setTitle] = useState(recording.title);
   const [copied, setCopied] = useState(false);
@@ -232,6 +296,7 @@ function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: 
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <CompressMenu recording={recording} />
           <Button variant="outline" onClick={() => void glimpse.copyRecording(recording.id).then(() => setCopied(true))}>
             <CopyIcon />
             {copied ? "Copied" : "Copy video"}

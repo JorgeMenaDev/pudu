@@ -77,6 +77,21 @@ export interface Recording {
   readonly thumbnailUrl: string | null;
 }
 
+// Share copies: smaller H.264/AAC MP4s that Teams, Jira, Slack and email all
+// play inline. `approxMbps` is measured on screen recordings, for size estimates.
+export const SHARE_PRESETS = [
+  { id: "720p", label: "Small · 720p", detail: "Best for Teams, Jira and email", approxMbps: 1.6 },
+  { id: "540p", label: "Smallest · 540p", detail: "For strict email size limits", approxMbps: 1.3 },
+  { id: "1080p", label: "Sharp · 1080p", detail: "Keeps small text crisp", approxMbps: 3.8 },
+] as const;
+
+export type SharePresetId = (typeof SHARE_PRESETS)[number]["id"];
+
+export interface CompressProgress {
+  readonly id: string;
+  readonly progress: number; // 0–1
+}
+
 export type PermissionKind = "screen" | "camera" | "microphone";
 export type PermissionStatus = "granted" | "denied" | "not-determined" | "restricted" | "unknown";
 export type Permissions = Record<PermissionKind, PermissionStatus>;
@@ -128,6 +143,9 @@ export interface GlimpseBridge {
   revealRecording(id: string): Promise<void>;
   shareRecording(id: string): Promise<void>;
   copyRecording(id: string): Promise<void>;
+  // Makes a smaller copy next to the original and resolves with the copy's id.
+  compressRecording(id: string, preset: SharePresetId): Promise<string>;
+  onCompressProgress(listener: (progress: CompressProgress) => void): Unsubscribe;
   onLibraryChanged(listener: (focusId: string | null) => void): Unsubscribe;
 
   recorder: {
@@ -163,6 +181,8 @@ export const IPC = {
   revealRecording: "glimpse:reveal-recording",
   shareRecording: "glimpse:share-recording",
   copyRecording: "glimpse:copy-recording",
+  compressRecording: "glimpse:compress-recording",
+  compressProgress: "glimpse:compress-progress",
   libraryChanged: "glimpse:library-changed",
   recorderCommand: "glimpse:recorder-command",
   recorderReady: "glimpse:recorder-ready",

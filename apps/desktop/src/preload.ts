@@ -38,6 +38,8 @@ const bridge: GlimpseBridge = {
   revealRecording: (id) => ipcRenderer.invoke(IPC.revealRecording, id),
   shareRecording: (id) => ipcRenderer.invoke(IPC.shareRecording, id),
   copyRecording: (id) => ipcRenderer.invoke(IPC.copyRecording, id),
+  compressRecording: (id, preset) => ipcRenderer.invoke(IPC.compressRecording, id, preset),
+  onCompressProgress: (listener) => subscribe(IPC.compressProgress, listener),
   onLibraryChanged: (listener) => subscribe(IPC.libraryChanged, listener),
 
   recorder: {

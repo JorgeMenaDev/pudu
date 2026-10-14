@@ -1,7 +1,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { MEDIA_SCHEME, type Recording } from "@glimpse/contracts";
+import { MEDIA_SCHEME, type Recording, type SharePresetId } from "@glimpse/contracts";
+
+import { AV_PRESETS, fitWithin, runAvconvert } from "./compress.ts";
 
 // Recordings live as plain files so they stay usable outside the app:
 //   <id>.mp4 (or .webm)  the video
@@ -59,6 +61,7 @@ export class Library {
 
   async save(input: {
     id: string;
+    title?: string;
     createdAt: Date;
     tempVideoPath: string;
     durationMs: number;
@@ -74,7 +77,7 @@ export class Library {
     }
     const meta: RecordingMeta = {
       id: input.id,
-      title: defaultTitle(input.createdAt),
+      title: input.title ?? defaultTitle(input.createdAt),
       createdAt: input.createdAt.toISOString(),
       durationMs: input.durationMs,
       width: input.width,
@@ -107,6 +110,40 @@ export class Library {
       (file): file is string => file !== undefined,
     );
     await Promise.all(files.map((file) => fs.rm(path.join(this.dir, file), { force: true })));
+  }
+
+  // Re-encodes a recording with macOS's built-in `avconvert` into a smaller,
+  // fast-start MP4, saved as its own library entry next to the original.
+  async createShareCopy(
+    id: string,
+    preset: SharePresetId,
+    onProgress: (progress: number) => void,
+  ): Promise<string> {
+    const meta = await this.readMeta(id);
+    if (!meta) throw new Error("Recording not found.");
+    const createdAt = new Date();
+    const copyId = newRecordingId(createdAt);
+    const tempPath = path.join(this.dir, `.${copyId}.part.mp4`);
+    try {
+      await runAvconvert(path.join(this.dir, meta.videoFile), tempPath, AV_PRESETS[preset].avPreset, onProgress);
+    } catch (error) {
+      await fs.rm(tempPath, { force: true });
+      throw error;
+    }
+    const thumbnail = await fs.readFile(path.join(this.dir, `${id}.jpg`)).catch(() => null);
+    const size = fitWithin(meta.width, meta.height, AV_PRESETS[preset].box);
+    await this.save({
+      id: copyId,
+      title: `${meta.title} (${preset})`,
+      createdAt,
+      tempVideoPath: tempPath,
+      durationMs: meta.durationMs,
+      width: size.width,
+      height: size.height,
+      mimeType: "video/mp4;codecs=avc1,mp4a.40.2",
+      thumbnailJpeg: thumbnail ? new Uint8Array(thumbnail).buffer : null,
+    });
+    return copyId;
   }
 
   async videoFileFor(id: string): Promise<string | null> {

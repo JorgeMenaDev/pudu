@@ -18,10 +18,12 @@ import {
   IPC,
   MEDIA_SCHEME,
   elapsedMs,
+  type CompressProgress,
   type PermissionKind,
   type RecorderResult,
   type RecorderSettings,
   type RecorderState,
+  type SharePresetId,
 } from "@glimpse/contracts";
 
 import { Library } from "./library.ts";
@@ -31,7 +33,7 @@ import { SettingsStore } from "./settings.ts";
 import { Studio } from "./studio.ts";
 import { createTrayIcon } from "./trayIcon.ts";
 
-// Loom's default shortcuts (docs/loom-teardown.md § Default shortcuts).
+// The same defaults as Loom, so the shortcuts feel familiar.
 const SHORTCUTS = {
   startStop: "Command+Shift+L",
   pause: "Alt+Shift+P",
@@ -148,6 +150,15 @@ function registerIpc(studio: Studio, library: Library): void {
     if (file) new ShareMenu({ filePaths: [file] }).popup();
   });
   // Puts the file itself on the pasteboard, so ⌘V attaches it in Slack, Mail, Finder…
+  handle(IPC.compressRecording, async (id: string, preset: SharePresetId) => {
+    const copyId = await library.createShareCopy(id, preset, (progress) =>
+      BrowserWindow.getAllWindows().forEach((win) =>
+        win.webContents.send(IPC.compressProgress, { id, progress } satisfies CompressProgress),
+      ),
+    );
+    studio.notifyLibraryChanged(copyId);
+    return copyId;
+  });
   handle(IPC.copyRecording, async (id: string) => {
     const file = await library.videoFileFor(id);
     if (!file) return;
@@ -166,7 +177,8 @@ function registerIpc(studio: Studio, library: Library): void {
 }
 
 void app.whenReady().then(() => {
-  const library = new Library(path.join(app.getPath("videos"), "Glimpse"));
+  // GLIMPSE_LIBRARY_DIR points the app at another folder, for demos and screenshots.
+  const library = new Library(process.env.GLIMPSE_LIBRARY_DIR ?? path.join(app.getPath("videos"), "Glimpse"));
   const studio = new Studio(new SettingsStore(app.getPath("userData")), library, syncTray);
 
   protocol.handle(MEDIA_SCHEME, (request) => handleMediaRequest(library, request));

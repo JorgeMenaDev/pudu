@@ -2,7 +2,10 @@
   "name": "glimpse",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun apps/desktop/scripts/dev.ts",
     "build": "bun run --cwd apps/web build && bun run --cwd apps/desktop build",
@@ -14,5 +17,6 @@
   "devDependencies": {
     "@types/bun": "^1.2.21",
     "typescript": "^5.9.3"
-  }
+  },
+  "license": "MIT"
 }

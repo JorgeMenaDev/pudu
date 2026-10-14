@@ -39,5 +39,8 @@
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist"
     }
-  }
+  },
+  "license": "MIT",
+  "author": "Jorge Mena",
+  "homepage": "https://github.com/JorgeMenaDev/glimpse"
 }
