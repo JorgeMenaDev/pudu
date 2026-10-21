@@ -102,7 +102,7 @@ While recording, click the menu bar icon to stop. Right-click it for the other a
 
 1. Download the latest `Pudu-…-arm64.dmg` from [Releases](https://github.com/JorgeMenaDev/pudu/releases/latest).
 2. Open it and drag **Pudu** to **Applications**.
-3. The app is not notarized by Apple yet, so macOS blocks the first launch. Open **System Settings → Privacy & Security** and click **Open Anyway** (on macOS 14, right-click **Pudu** in Applications and choose **Open**). If macOS still refuses, run:
+3. Builds after v0.1.0 are signed and notarized by Apple, so they open like any app. v0.1.0 is not: macOS blocks its first launch. Open **System Settings → Privacy & Security** and click **Open Anyway** (on macOS 14, right-click **Pudu** in Applications and choose **Open**). If macOS still refuses, run:
 
    ```sh
    xattr -dr com.apple.quarantine /Applications/Pudu.app
