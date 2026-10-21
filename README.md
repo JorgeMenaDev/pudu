@@ -47,7 +47,7 @@ Pudu does the useful part and nothing else:
   <img src="assets/screenshots/launcher-dark.png" alt="The Pudu launcher under the menu bar icon" width="360" />
 </picture>
 
-Click the menu bar icon or **New recording**. Pick a whole screen or a single window, then your camera and microphone. A level meter shows that your mic can hear you.
+Pudu lives in the menu bar as a small pudú face. Click it or **New recording**. Pick a whole screen or a single window, then your camera and microphone. A level meter shows that your mic can hear you.
 
 Recording starts after a 3-second countdown. Click the countdown to skip it, or turn it off.
 
@@ -110,6 +110,11 @@ Right-click the menu bar icon for your last three recordings, **Settings…** an
 - **General:** open at login, the countdown, and the recordings folder.
 - **Permissions:** Screen Recording, Camera and Microphone, each with its status. Camera and Microphone have one button: **Allow** while macOS can still ask, otherwise **Open System Settings**. Screen Recording is allowed only in System Settings. Its **Open System Settings** button adds Pudu to the Screen Recording list and opens it. After that, **Restart Pudu** appears, because macOS applies the change only after a relaunch.
 - **Shortcuts:** the four global shortcuts.
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/tray-light.png" />
+  <img src="assets/screenshots/tray-dark.png" alt="The Pudu menu bar icon, alone and with the warning mark" width="200" />
+</picture>
 
 When the current setup is missing a permission, the menu bar icon shows a small warning mark, its tooltip names the permission, and the menu offers **Fix permissions…**. Screen Recording is always needed. Camera and Microphone are needed only while they are on.
 
