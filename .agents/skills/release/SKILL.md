@@ -49,6 +49,7 @@ Read the failing step first: `gh run view <run-id> --log-failed`.
 
 - **Runner, network or notarization timeout:** `gh run rerun <run-id> --failed`. A rerun keeps the run number, so the beta keeps its tag.
 - **Code or config bug:** fix it in a PR. Merging ships a new beta.
+- **Publish refused the tag push (workflows permission) after a later merge changed `.github/workflows/`:** no action. `GITHUB_TOKEN` cannot tag that older commit, and the newer run's beta ships the same changes.
 - **Stable tag rejected or failed before publishing:** check `gh release view <tag>` reports no release, then delete the tag (`git push origin :refs/tags/<tag>`), fix, and tag again.
 
 ## Signing
