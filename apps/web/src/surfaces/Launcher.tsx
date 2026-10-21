@@ -205,7 +205,7 @@ function LevelMeter({ level }: { level: number }) {
 // For a denied permission: macOS never asks twice, so the fix is in System Settings.
 function PermissionCallout({ kind }: { kind: PermissionKind }) {
   const copy: Record<PermissionKind, string> = {
-    screen: "Allow Screen Recording for Pudu in System Settings, then reopen this panel.",
+    screen: "Allow Screen Recording for Pudu in System Settings, then restart Pudu.",
     camera: "Allow Camera for Pudu in System Settings.",
     microphone: "Allow Microphone for Pudu in System Settings.",
   };
