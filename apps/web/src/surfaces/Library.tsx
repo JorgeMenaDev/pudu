@@ -189,7 +189,7 @@ type CopyState = { readonly progress: number } | { readonly bytes: number } | { 
 function ExportPanel({ recording }: { recording: Recording }) {
   const [size, setSize] = useState<ExportSize>("original");
   const [copies, setCopies] = useState<Partial<Record<SharePresetId, CopyState>>>({});
-  const [notice, setNotice] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ readonly text: string; readonly failed: boolean } | null>(null);
   const setCopy = (preset: SharePresetId, state: CopyState) => setCopies((current) => ({ ...current, [preset]: state }));
   useEffect(
     () =>
@@ -217,6 +217,13 @@ function ExportPanel({ recording }: { recording: Recording }) {
     }
   };
 
+  // Shows how an action button went: its message, or `failure`. Clicking again retries.
+  const report = (action: Promise<string | null>, failure: string) =>
+    void action.then(
+      (text) => setNotice(text ? { text, failed: false } : null),
+      () => setNotice({ text: failure, failed: true }),
+    );
+
   const estimateBytes = (mbps: number) => ((recording.durationMs / 1000) * mbps * 1_000_000) / 8;
   // Only offer sizes that would actually shrink this file.
   const presets = SHARE_PRESETS.filter((preset) => estimateBytes(preset.approxMbps) < recording.sizeBytes * 0.8);
@@ -228,7 +235,12 @@ function ExportPanel({ recording }: { recording: Recording }) {
       <PopoverTitle>Export recording</PopoverTitle>
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-muted-foreground">Size</span>
-        <RadioGroup value={size} onValueChange={(value: ExportSize) => void choose(value)} className="gap-0">
+        <RadioGroup
+          value={size}
+          onValueChange={(value: ExportSize) => void choose(value)}
+          aria-label="Size"
+          className="gap-0"
+        >
           <SizeOption value="original" label="Original" detail={formatBytes(recording.sizeBytes)} />
           {presets.map((preset) => {
             const copy = copies[preset.id];
@@ -275,7 +287,12 @@ function ExportPanel({ recording }: { recording: Recording }) {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => void pudu.copyRecording(recording.id, size).then(() => setNotice("Copied. Paste with ⌘V."))}
+                onClick={() =>
+                  report(
+                    pudu.copyRecording(recording.id, size).then(() => "Copied. Paste with ⌘V."),
+                    "Couldn't copy. Try again.",
+                  )
+                }
               >
                 <CopyIcon />
                 Copy to clipboard
@@ -284,22 +301,44 @@ function ExportPanel({ recording }: { recording: Recording }) {
                 variant="outline"
                 size="sm"
                 onClick={() =>
-                  void pudu.saveRecording(recording.id, size).then((saved) => setNotice(saved ? "Saved." : null))
+                  report(
+                    pudu.saveRecording(recording.id, size).then((saved) => (saved ? "Saved." : null)),
+                    "Couldn't save. Try again.",
+                  )
                 }
               >
                 <DownloadIcon />
                 Save to…
               </Button>
-              <Button variant="outline" size="sm" onClick={() => void pudu.shareRecording(recording.id, size)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  report(pudu.shareRecording(recording.id, size).then(() => null), "Couldn't share. Try again.")
+                }
+              >
                 <ShareIcon />
                 Share…
               </Button>
-              <Button variant="outline" size="sm" onClick={() => void pudu.revealRecording(recording.id, size)}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  report(
+                    pudu.revealRecording(recording.id, size).then(() => null),
+                    "Couldn't show in Finder. Try again.",
+                  )
+                }
+              >
                 <FolderOpenIcon />
                 Show in Finder
               </Button>
             </div>
-            {notice && <p className="text-xs text-muted-foreground">{notice}</p>}
+            {notice && (
+              <p className={cn("text-xs", notice.failed ? "text-destructive-foreground" : "text-muted-foreground")}>
+                {notice.text}
+              </p>
+            )}
           </>
         )}
       </div>
@@ -331,7 +370,6 @@ function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: 
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5 px-8 pt-2 pb-10">
       <div className="overflow-hidden rounded-2xl border bg-black shadow-lg/10">
         <video
-          key={recording.id}
           src={recording.videoUrl}
           poster={recording.thumbnailUrl ?? undefined}
           controls
@@ -452,7 +490,8 @@ export function Library() {
           </header>
           <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
             {recordings === null ? null : selected ? (
-              <RecordingDetail recording={selected} onBack={() => setFocusId(null)} />
+              // Keyed so another recording never inherits this one's export or title state.
+              <RecordingDetail key={selected.id} recording={selected} onBack={() => setFocusId(null)} />
             ) : recordings.length === 0 ? (
               <EmptyState onNew={openLauncher} />
             ) : (

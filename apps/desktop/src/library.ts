@@ -47,6 +47,9 @@ export class Library {
   // Share copies being made, so a second request joins the first instead of
   // writing the same file.
   private readonly preparing = new Map<string, Promise<number>>();
+  // Each recording's metadata changes one at a time, so a finished copy, a
+  // rename and a delete can't overwrite or bring back each other's metadata.
+  private readonly locks = new Map<string, Promise<void>>();
 
   // `convert` is swapped out in tests.
   constructor(
@@ -108,17 +111,21 @@ export class Library {
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }
 
-  async rename(id: string, title: string): Promise<void> {
-    const meta = await this.readMeta(id);
-    if (meta) await this.writeMeta({ ...meta, title: title.trim() || meta.title });
+  rename(id: string, title: string): Promise<void> {
+    return this.locked(id, async () => {
+      const meta = await this.readMeta(id);
+      if (meta) await this.writeMeta({ ...meta, title: title.trim() || meta.title });
+    });
   }
 
-  async remove(id: string): Promise<void> {
-    const meta = await this.readMeta(id);
-    const files = [`${id}.json`, `${id}.jpg`, meta?.videoFile, ...Object.values(meta?.copies ?? {})].filter(
-      (file): file is string => file !== undefined,
-    );
-    await Promise.all(files.map((file) => fs.rm(path.join(this.dir, file), { force: true })));
+  remove(id: string): Promise<void> {
+    return this.locked(id, async () => {
+      const meta = await this.readMeta(id);
+      const files = [`${id}.json`, `${id}.jpg`, meta?.videoFile, ...Object.values(meta?.copies ?? {})].filter(
+        (file): file is string => file !== undefined,
+      );
+      await Promise.all(files.map((file) => fs.rm(path.join(this.dir, file), { force: true })));
+    });
   }
 
   // Re-encodes a recording with macOS's built-in `avconvert` into a smaller,
@@ -152,22 +159,34 @@ export class Library {
     if (stat) return stat.size;
 
     const file = `${id}.${preset}.mp4`;
+    const filePath = path.join(this.dir, file);
     const tempPath = path.join(this.dir, `.${id}.${preset}.part.mp4`);
     try {
       await this.convert(path.join(this.dir, meta.videoFile), tempPath, AV_PRESETS[preset], onProgress);
-      await fs.rename(tempPath, path.join(this.dir, file));
+      // Read again: the recording may have been renamed or deleted meanwhile.
+      return await this.locked(id, async () => {
+        const latest = await this.readMeta(id);
+        if (!latest) throw new Error("Recording not found.");
+        await fs.rename(tempPath, filePath);
+        await this.writeMeta({ ...latest, copies: { ...latest.copies, [preset]: file } });
+        return (await fs.stat(filePath)).size;
+      });
     } catch (error) {
-      await fs.rm(tempPath, { force: true });
+      // A copy its metadata doesn't list would never be deleted, so drop it.
+      await Promise.all([fs.rm(tempPath, { force: true }), fs.rm(filePath, { force: true })]);
       throw error;
     }
-    // Read again: the recording may have been renamed or deleted meanwhile.
-    const latest = await this.readMeta(id);
-    if (!latest) {
-      await fs.rm(path.join(this.dir, file), { force: true });
-      throw new Error("Recording not found.");
-    }
-    await this.writeMeta({ ...latest, copies: { ...latest.copies, [preset]: file } });
-    return (await fs.stat(path.join(this.dir, file))).size;
+  }
+
+  // Runs `task` after any earlier task for the same recording has settled.
+  private locked<T>(id: string, task: () => Promise<T>): Promise<T> {
+    const result = (this.locks.get(id) ?? Promise.resolve()).then(task);
+    const settled = result.then(() => {}, () => {});
+    this.locks.set(id, settled);
+    void settled.then(() => {
+      if (this.locks.get(id) === settled) this.locks.delete(id);
+    });
+    return result;
   }
 
   private async load(id: string): Promise<Recording | null> {
@@ -203,7 +222,15 @@ export class Library {
     }
   }
 
+  // Writes through a temp file, so a failed write leaves the old metadata whole.
   private async writeMeta(meta: RecordingMeta): Promise<void> {
-    await fs.writeFile(path.join(this.dir, `${meta.id}.json`), `${JSON.stringify(meta, null, 2)}\n`);
+    const tempPath = path.join(this.dir, `.${meta.id}.json.part`);
+    try {
+      await fs.writeFile(tempPath, `${JSON.stringify(meta, null, 2)}\n`);
+      await fs.rename(tempPath, path.join(this.dir, `${meta.id}.json`));
+    } catch (error) {
+      await fs.rm(tempPath, { force: true });
+      throw error;
+    }
   }
 }

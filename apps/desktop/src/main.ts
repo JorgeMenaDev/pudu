@@ -35,6 +35,7 @@ import {
 
 import { Library } from "./library.ts";
 import { handleMediaRequest } from "./mediaProtocol.ts";
+import { filenamesPlist } from "./pasteboard.ts";
 import * as Permissions from "./permissions.ts";
 import { SettingsStore } from "./settings.ts";
 import { Studio } from "./studio.ts";
@@ -215,12 +216,9 @@ function registerIpc(studio: Studio, library: Library): void {
     const file = await library.exportFile(id, size);
     if (file) new ShareMenu({ filePaths: [file.path] }).popup();
   });
-  // Puts the file itself on the pasteboard, so ⌘V attaches it in Slack, Mail, Finder…
   handle(IPC.copyRecording, async (id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);
-    if (!file) return;
-    const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><array><string>${file.path}</string></array></plist>`;
-    clipboard.writeBuffer("NSFilenamesPboardType", Buffer.from(plist));
+    if (file) clipboard.writeBuffer("NSFilenamesPboardType", Buffer.from(filenamesPlist(file.path)));
   });
   ipcMain.handle(IPC.saveRecording, async (event, id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);

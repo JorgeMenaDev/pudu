@@ -85,10 +85,11 @@ describe("Library", () => {
     expect(conversions).toEqual(["Preset1280x720", "Preset960x540"]);
   });
 
-  test("deletes share copies with the original", async () => {
+  test("lists share copies made at the same time, and deletes them with the original", async () => {
     await saveTake("a", new Date());
-    await library.prepareCopy("a", "720p", () => {});
-    await library.prepareCopy("a", "540p", () => {});
+    await Promise.all([library.prepareCopy("a", "720p", () => {}), library.prepareCopy("a", "540p", () => {})]);
+    const meta = JSON.parse(await fs.readFile(path.join(dir, "a.json"), "utf8"));
+    expect(meta.copies).toEqual({ "720p": "a.720p.mp4", "540p": "a.540p.mp4" });
     await library.remove("a");
     expect(await fs.readdir(dir)).toEqual([]);
   });
