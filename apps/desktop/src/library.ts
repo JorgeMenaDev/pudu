@@ -140,11 +140,13 @@ export class Library {
   }
 
   // The file to hand out for a size, and the name to suggest when saving it.
-  // Null when the recording, or that copy of it, doesn't exist.
-  async exportFile(id: string, size: ExportSize): Promise<{ path: string; saveName: string } | null> {
+  // Rejects when the recording, or that copy of it, isn't on disk: metadata
+  // still lists a copy deleted outside Pudu.
+  async exportFile(id: string, size: ExportSize): Promise<{ path: string; saveName: string }> {
     const meta = await this.readMeta(id);
     const file = size === "original" ? meta?.videoFile : meta?.copies?.[size];
-    if (!meta || !file) return null;
+    const stat = file ? await fs.stat(path.join(this.dir, file)).catch(() => null) : null;
+    if (!meta || !file || !stat) throw new Error("File not found.");
     // macOS file names can't contain "/" or ":".
     const title = meta.title.replace(/[/:]/g, "-");
     const suffix = size === "original" ? "" : ` (${size})`;

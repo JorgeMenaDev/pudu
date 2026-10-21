@@ -88,7 +88,7 @@ When you stop, the take opens in your library, ready to watch. From there you ca
 
 **Original** is ready at once. Full-resolution screen recordings are big, though, and email and chat apps have limits. Pick a smaller size and Pudu first makes a copy with the video converter built into macOS. It takes a few seconds and needs nothing extra installed. Until the copy is ready, its size is an estimate.
 
-The copy stays with its recording, next to the original in `~/Movies/Pudu`. Pick the same size later and it is ready at once. Delete the recording and its copies go too. Sizes that would barely shrink the file are not offered.
+The copy stays with its recording, next to the original in `~/Movies/Pudu`. Pick the same size later and it is ready at once. If the copy was deleted in Finder, Pudu makes it again. Delete the recording and its copies go too. Sizes that would barely shrink the file are not offered.
 
 | Size | Best for | Typical size per minute |
 | --- | --- | --- |

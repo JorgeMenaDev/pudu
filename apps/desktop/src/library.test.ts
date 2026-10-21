@@ -85,6 +85,17 @@ describe("Library", () => {
     expect(conversions).toEqual(["Preset1280x720", "Preset960x540"]);
   });
 
+  test("makes a share copy again after it's deleted outside Pudu", async () => {
+    await saveTake("a", new Date());
+    await library.prepareCopy("a", "720p", () => {});
+    await fs.rm(path.join(dir, "a.720p.mp4"));
+
+    await expect(library.exportFile("a", "720p")).rejects.toThrow("File not found.");
+    expect(await library.prepareCopy("a", "720p", () => {})).toBe(5);
+    expect(conversions).toEqual(["Preset1280x720", "Preset1280x720"]);
+    expect((await library.exportFile("a", "720p")).path).toBe(path.join(dir, "a.720p.mp4"));
+  });
+
   test("lists share copies made at the same time, and deletes them with the original", async () => {
     await saveTake("a", new Date());
     await Promise.all([library.prepareCopy("a", "720p", () => {}), library.prepareCopy("a", "540p", () => {})]);

@@ -197,31 +197,41 @@ function ExportPanel({ recording }: { recording: Recording }) {
         if (id !== recording.id) return;
         setCopies((current) => {
           const copy = current[preset];
-          return copy && "progress" in copy ? { ...current, [preset]: { progress } } : current;
+          // A ready copy shows progress again when main has to remake it.
+          return copy && !("error" in copy) ? { ...current, [preset]: { progress } } : current;
         });
       }),
     [recording.id],
   );
 
-  const choose = async (next: ExportSize) => {
-    setSize(next);
-    setNotice(null);
-    if (next === "original") return;
-    const copy = copies[next];
-    if (copy && !("error" in copy)) return;
-    setCopy(next, { progress: 0 });
+  // Makes the copy, or checks a ready one is still on disk. A ready copy stays
+  // shown while main checks it; main remakes it, with progress, if it's gone.
+  const prepare = async (preset: SharePresetId) => {
+    const copy = copies[preset];
+    if (copy && "progress" in copy) return;
+    if (!copy || "error" in copy) setCopy(preset, { progress: 0 });
     try {
-      setCopy(next, { bytes: await pudu.prepareExport(recording.id, next) });
+      setCopy(preset, { bytes: await pudu.prepareExport(recording.id, preset) });
     } catch (reason) {
-      setCopy(next, { error: reason instanceof Error ? reason.message : String(reason) });
+      setCopy(preset, { error: reason instanceof Error ? reason.message : String(reason) });
     }
   };
 
-  // Shows how an action button went: its message, or `failure`. Clicking again retries.
+  const choose = (next: ExportSize) => {
+    setSize(next);
+    setNotice(null);
+    if (next !== "original") void prepare(next);
+  };
+
+  // Shows how an action button went: its message, or `failure`. Clicking again
+  // retries. A failed copy may have been deleted outside Pudu, so prepare it again.
   const report = (action: Promise<string | null>, failure: string) =>
     void action.then(
       (text) => setNotice(text ? { text, failed: false } : null),
-      () => setNotice({ text: failure, failed: true }),
+      () => {
+        setNotice({ text: failure, failed: true });
+        if (size !== "original") void prepare(size);
+      },
     );
 
   const estimateBytes = (mbps: number) => ((recording.durationMs / 1000) * mbps * 1_000_000) / 8;
@@ -237,7 +247,7 @@ function ExportPanel({ recording }: { recording: Recording }) {
         <span className="text-xs font-medium text-muted-foreground">Size</span>
         <RadioGroup
           value={size}
-          onValueChange={(value: ExportSize) => void choose(value)}
+          onValueChange={(value: ExportSize) => choose(value)}
           aria-label="Size"
           className="gap-0"
         >
@@ -269,7 +279,7 @@ function ExportPanel({ recording }: { recording: Recording }) {
             <p className="text-sm text-destructive-foreground" title={status.error}>
               Couldn't prepare {label}.
             </p>
-            <Button variant="outline" size="sm" onClick={() => void choose(size)}>
+            <Button variant="outline" size="sm" onClick={() => choose(size)}>
               Try again
             </Button>
           </div>

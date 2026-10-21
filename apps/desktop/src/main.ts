@@ -210,20 +210,20 @@ function registerIpc(studio: Studio, library: Library): void {
   });
   handle(IPC.revealRecording, async (id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);
-    if (file) shell.showItemInFolder(file.path);
+    shell.showItemInFolder(file.path);
   });
   handle(IPC.shareRecording, async (id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);
-    if (file) new ShareMenu({ filePaths: [file.path] }).popup();
+    new ShareMenu({ filePaths: [file.path] }).popup();
   });
   handle(IPC.copyRecording, async (id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);
-    if (file) clipboard.writeBuffer("NSFilenamesPboardType", Buffer.from(filenamesPlist(file.path)));
+    clipboard.writeBuffer("NSFilenamesPboardType", Buffer.from(filenamesPlist(file.path)));
   });
   ipcMain.handle(IPC.saveRecording, async (event, id: string, size: ExportSize) => {
     const file = await library.exportFile(id, size);
     const win = BrowserWindow.fromWebContents(event.sender);
-    if (!file || !win) return false;
+    if (!win) return false;
     const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: file.saveName });
     if (canceled || !filePath) return false;
     await fs.copyFile(file.path, filePath);
