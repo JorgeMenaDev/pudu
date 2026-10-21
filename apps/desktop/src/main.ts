@@ -1,3 +1,4 @@
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
 import {
@@ -22,7 +23,8 @@ import {
   elapsedMs,
   missingPermissions,
   type AppStatus,
-  type CompressProgress,
+  type ExportProgress,
+  type ExportSize,
   type PermissionKind,
   type RecorderResult,
   type RecorderSettings,
@@ -205,30 +207,37 @@ function registerIpc(studio: Studio, library: Library): void {
     await library.remove(id);
     studio.notifyLibraryChanged();
   });
-  handle(IPC.revealRecording, async (id: string) => {
-    const file = await library.videoFileFor(id);
-    if (file) shell.showItemInFolder(file);
+  handle(IPC.revealRecording, async (id: string, size: ExportSize) => {
+    const file = await library.exportFile(id, size);
+    if (file) shell.showItemInFolder(file.path);
   });
-  handle(IPC.shareRecording, async (id: string) => {
-    const file = await library.videoFileFor(id);
-    if (file) new ShareMenu({ filePaths: [file] }).popup();
+  handle(IPC.shareRecording, async (id: string, size: ExportSize) => {
+    const file = await library.exportFile(id, size);
+    if (file) new ShareMenu({ filePaths: [file.path] }).popup();
   });
   // Puts the file itself on the pasteboard, so ⌘V attaches it in Slack, Mail, Finder…
-  handle(IPC.compressRecording, async (id: string, preset: SharePresetId) => {
-    const copyId = await library.createShareCopy(id, preset, (progress) =>
-      BrowserWindow.getAllWindows().forEach((win) =>
-        win.webContents.send(IPC.compressProgress, { id, progress } satisfies CompressProgress),
-      ),
-    );
-    studio.notifyLibraryChanged(copyId);
-    return copyId;
-  });
-  handle(IPC.copyRecording, async (id: string) => {
-    const file = await library.videoFileFor(id);
+  handle(IPC.copyRecording, async (id: string, size: ExportSize) => {
+    const file = await library.exportFile(id, size);
     if (!file) return;
-    const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><array><string>${file}</string></array></plist>`;
+    const plist = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><array><string>${file.path}</string></array></plist>`;
     clipboard.writeBuffer("NSFilenamesPboardType", Buffer.from(plist));
   });
+  ipcMain.handle(IPC.saveRecording, async (event, id: string, size: ExportSize) => {
+    const file = await library.exportFile(id, size);
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!file || !win) return false;
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: file.saveName });
+    if (canceled || !filePath) return false;
+    await fs.copyFile(file.path, filePath);
+    return true;
+  });
+  handle(IPC.prepareExport, (id: string, preset: SharePresetId) =>
+    library.prepareCopy(id, preset, (progress) =>
+      BrowserWindow.getAllWindows().forEach((win) =>
+        win.webContents.send(IPC.exportProgress, { id, preset, progress } satisfies ExportProgress),
+      ),
+    ),
+  );
 
   ipcMain.on(IPC.moveWindowBy, (event, dx: number, dy: number) => {
     const win = BrowserWindow.fromWebContents(event.sender);

@@ -40,11 +40,12 @@ const bridge: PuduBridge = {
   listRecordings: () => ipcRenderer.invoke(IPC.listRecordings),
   renameRecording: (id, title) => ipcRenderer.invoke(IPC.renameRecording, id, title),
   deleteRecording: (id) => ipcRenderer.invoke(IPC.deleteRecording, id),
-  revealRecording: (id) => ipcRenderer.invoke(IPC.revealRecording, id),
-  shareRecording: (id) => ipcRenderer.invoke(IPC.shareRecording, id),
-  copyRecording: (id) => ipcRenderer.invoke(IPC.copyRecording, id),
-  compressRecording: (id, preset) => ipcRenderer.invoke(IPC.compressRecording, id, preset),
-  onCompressProgress: (listener) => subscribe(IPC.compressProgress, listener),
+  revealRecording: (id, size) => ipcRenderer.invoke(IPC.revealRecording, id, size),
+  shareRecording: (id, size) => ipcRenderer.invoke(IPC.shareRecording, id, size),
+  copyRecording: (id, size) => ipcRenderer.invoke(IPC.copyRecording, id, size),
+  saveRecording: (id, size) => ipcRenderer.invoke(IPC.saveRecording, id, size),
+  prepareExport: (id, preset) => ipcRenderer.invoke(IPC.prepareExport, id, preset),
+  onExportProgress: (listener) => subscribe(IPC.exportProgress, listener),
   onLibraryChanged: (listener) => subscribe(IPC.libraryChanged, listener),
 
   recorder: {

@@ -1,14 +1,15 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
-import { MEDIA_SCHEME, type Recording, type SharePresetId } from "@pudu/contracts";
+import { MEDIA_SCHEME, type ExportSize, type Recording, type SharePresetId } from "@pudu/contracts";
 
-import { AV_PRESETS, fitWithin, runAvconvert } from "./compress.ts";
+import { AV_PRESETS, runAvconvert } from "./compress.ts";
 
 // Recordings live as plain files so they stay usable outside the app:
 //   <id>.mp4 (or .webm)  the video
 //   <id>.jpg             first-frame thumbnail
-//   <id>.json            metadata (title, duration, size)
+//   <id>.json            metadata (title, duration, size, share copies)
+//   <id>.720p.mp4        a smaller share copy made by the Export panel
 interface RecordingMeta {
   readonly id: string;
   readonly title: string;
@@ -18,6 +19,7 @@ interface RecordingMeta {
   readonly height: number;
   readonly mimeType: string;
   readonly videoFile: string;
+  readonly copies?: Partial<Record<SharePresetId, string>>;
 }
 
 export function extensionForMime(mimeType: string): "mp4" | "webm" {
@@ -42,7 +44,15 @@ export function newRecordingId(date: Date): string {
 }
 
 export class Library {
-  constructor(readonly dir: string) {}
+  // Share copies being made, so a second request joins the first instead of
+  // writing the same file.
+  private readonly preparing = new Map<string, Promise<number>>();
+
+  // `convert` is swapped out in tests.
+  constructor(
+    readonly dir: string,
+    private readonly convert = runAvconvert,
+  ) {}
 
   async ensureDir(): Promise<void> {
     await fs.mkdir(this.dir, { recursive: true });
@@ -61,7 +71,6 @@ export class Library {
 
   async save(input: {
     id: string;
-    title?: string;
     createdAt: Date;
     tempVideoPath: string;
     durationMs: number;
@@ -77,7 +86,7 @@ export class Library {
     }
     const meta: RecordingMeta = {
       id: input.id,
-      title: input.title ?? defaultTitle(input.createdAt),
+      title: defaultTitle(input.createdAt),
       createdAt: input.createdAt.toISOString(),
       durationMs: input.durationMs,
       width: input.width,
@@ -106,49 +115,59 @@ export class Library {
 
   async remove(id: string): Promise<void> {
     const meta = await this.readMeta(id);
-    const files = [`${id}.json`, `${id}.jpg`, meta?.videoFile].filter(
+    const files = [`${id}.json`, `${id}.jpg`, meta?.videoFile, ...Object.values(meta?.copies ?? {})].filter(
       (file): file is string => file !== undefined,
     );
     await Promise.all(files.map((file) => fs.rm(path.join(this.dir, file), { force: true })));
   }
 
   // Re-encodes a recording with macOS's built-in `avconvert` into a smaller,
-  // fast-start MP4, saved as its own library entry next to the original.
-  async createShareCopy(
-    id: string,
-    preset: SharePresetId,
-    onProgress: (progress: number) => void,
-  ): Promise<string> {
+  // fast-start MP4 next to it, listed in its metadata. An existing copy is
+  // reused. Resolves with the copy's size in bytes.
+  prepareCopy(id: string, preset: SharePresetId, onProgress: (progress: number) => void): Promise<number> {
+    const key = `${id}.${preset}`;
+    const job =
+      this.preparing.get(key) ?? this.makeCopy(id, preset, onProgress).finally(() => this.preparing.delete(key));
+    this.preparing.set(key, job);
+    return job;
+  }
+
+  // The file to hand out for a size, and the name to suggest when saving it.
+  // Null when the recording, or that copy of it, doesn't exist.
+  async exportFile(id: string, size: ExportSize): Promise<{ path: string; saveName: string } | null> {
+    const meta = await this.readMeta(id);
+    const file = size === "original" ? meta?.videoFile : meta?.copies?.[size];
+    if (!meta || !file) return null;
+    // macOS file names can't contain "/" or ":".
+    const title = meta.title.replace(/[/:]/g, "-");
+    const suffix = size === "original" ? "" : ` (${size})`;
+    return { path: path.join(this.dir, file), saveName: `${title}${suffix}${path.extname(file)}` };
+  }
+
+  private async makeCopy(id: string, preset: SharePresetId, onProgress: (progress: number) => void): Promise<number> {
     const meta = await this.readMeta(id);
     if (!meta) throw new Error("Recording not found.");
-    const createdAt = new Date();
-    const copyId = newRecordingId(createdAt);
-    const tempPath = path.join(this.dir, `.${copyId}.part.mp4`);
+    const existing = meta.copies?.[preset];
+    const stat = existing ? await fs.stat(path.join(this.dir, existing)).catch(() => null) : null;
+    if (stat) return stat.size;
+
+    const file = `${id}.${preset}.mp4`;
+    const tempPath = path.join(this.dir, `.${id}.${preset}.part.mp4`);
     try {
-      await runAvconvert(path.join(this.dir, meta.videoFile), tempPath, AV_PRESETS[preset].avPreset, onProgress);
+      await this.convert(path.join(this.dir, meta.videoFile), tempPath, AV_PRESETS[preset], onProgress);
+      await fs.rename(tempPath, path.join(this.dir, file));
     } catch (error) {
       await fs.rm(tempPath, { force: true });
       throw error;
     }
-    const thumbnail = await fs.readFile(path.join(this.dir, `${id}.jpg`)).catch(() => null);
-    const size = fitWithin(meta.width, meta.height, AV_PRESETS[preset].box);
-    await this.save({
-      id: copyId,
-      title: `${meta.title} (${preset})`,
-      createdAt,
-      tempVideoPath: tempPath,
-      durationMs: meta.durationMs,
-      width: size.width,
-      height: size.height,
-      mimeType: "video/mp4;codecs=avc1,mp4a.40.2",
-      thumbnailJpeg: thumbnail ? new Uint8Array(thumbnail).buffer : null,
-    });
-    return copyId;
-  }
-
-  async videoFileFor(id: string): Promise<string | null> {
-    const meta = await this.readMeta(id);
-    return meta ? path.join(this.dir, meta.videoFile) : null;
+    // Read again: the recording may have been renamed or deleted meanwhile.
+    const latest = await this.readMeta(id);
+    if (!latest) {
+      await fs.rm(path.join(this.dir, file), { force: true });
+      throw new Error("Recording not found.");
+    }
+    await this.writeMeta({ ...latest, copies: { ...latest.copies, [preset]: file } });
+    return (await fs.stat(path.join(this.dir, file))).size;
   }
 
   private async load(id: string): Promise<Recording | null> {
