@@ -69,24 +69,32 @@ A small floating toolbar has **stop**, **pause**, **restart** and **delete**, wi
 When you stop, the take opens in your library, ready to watch. From there you can:
 
 - **Rename** it by clicking the title.
-- **Copy video** puts the file itself on the clipboard. Paste it into Teams, Slack, Mail or Finder with <kbd>⌘</kbd> <kbd>V</kbd>.
-- **Share** opens the macOS share menu: AirDrop, Mail, Messages, Notes and more.
+- **Export** it at full size or smaller: copy, save or share the file.
 - **Show in Finder** and **Delete**.
 
-### Compress for sharing
+### Export and share
 
 <picture>
-  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/compress-light.png" />
-  <img src="assets/screenshots/compress-dark.png" alt="The Compress menu with three sizes" width="900" />
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/export-light.png" />
+  <img src="assets/screenshots/export-dark.png" alt="The Export panel with a 720p copy ready to share" width="900" />
 </picture>
 
-Full-resolution screen recordings are big, and email and chat apps have limits. **Compress** makes a smaller copy next to the original, using the video converter built into macOS. It takes a few seconds and needs nothing extra installed.
+**Export…** opens one panel. Pick a size, then:
+
+- **Copy to clipboard** puts the file itself on the clipboard. Paste it into Teams, Slack, Mail or Finder with <kbd>⌘</kbd> <kbd>V</kbd>.
+- **Save to…** saves a copy wherever you choose.
+- **Share…** opens the macOS share menu: AirDrop, Mail, Messages, Notes and more.
+- **Show in Finder** shows the file.
+
+**Original** is ready at once. Full-resolution screen recordings are big, though, and email and chat apps have limits. Pick a smaller size and Pudu first makes a copy with the video converter built into macOS. It takes a few seconds and needs nothing extra installed. Until the copy is ready, its size is an estimate.
+
+The copy stays with its recording, next to the original in `~/Movies/Pudu`. Pick the same size later and it is ready at once. Delete the recording and its copies go too. Sizes that would barely shrink the file are not offered.
 
 | Size | Best for | Typical size per minute |
 | --- | --- | --- |
-| **Small · 720p** | Teams, Jira, Slack and most email | about 12 MB |
-| **Smallest · 540p** | Strict email limits (Outlook 20 MB, Gmail 25 MB) | about 10 MB |
-| **Sharp · 1080p** | Code and small text that must stay crisp | about 28 MB |
+| **1080p** | Code and small text that must stay crisp | about 28 MB |
+| **720p** | Teams, Jira, Slack and most email | about 12 MB |
+| **540p** | Strict email limits (Outlook 20 MB, Gmail 25 MB) | about 10 MB |
 
 For comparison, the original of a full-screen recording on a large display is about 50 MB per minute. The copy is a standard H.264/AAC MP4 with "fast start", so it plays inline in Teams, Jira, Slack, Outlook and Gmail, and on Windows, Android and iOS.
 
@@ -163,7 +171,7 @@ packages/contracts   Types and IPC channel names shared by every process
 apps/desktop         Electron main process
   studio.ts            The recording lifecycle and its windows (the single source of state)
   windows.ts           Window factories: library, launcher, settings, bubble, toolbar, countdown, recorder
-  library.ts           Recordings on disk: <id>.mp4 + <id>.jpg + <id>.json
+  library.ts           Recordings on disk: <id>.mp4 + <id>.jpg + <id>.json, plus share copies (<id>.720p.mp4)
   compress.ts          Share copies through macOS's built-in avconvert
   mediaProtocol.ts     pudu-media:// with byte ranges, so the player can seek
   preload.ts           The window.pudu bridge
