@@ -34,8 +34,8 @@ jobs:
   release:
     runs-on: macos-15
     timeout-minutes: 90 # Apple notarization is usually minutes, occasionally much longer
-    env:
-      GH_TOKEN: ${{ github.token }}
+    # GH_TOKEN goes only to the steps that call gh. With it in the Package step,
+    # electron-builder tries to publish to GitHub itself and crashes.
     steps:
       - uses: actions/checkout@v6
         with:
@@ -54,6 +54,7 @@ jobs:
       - name: Require a published beta under a stable tag
         if: steps.release.outputs.prerelease == 'false'
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
         run: |
           beta="$(git tag --points-at HEAD --list 'v*-beta.*' | head -n 1)"
@@ -113,6 +114,7 @@ jobs:
 
       - name: Publish
         env:
+          GH_TOKEN: ${{ github.token }}
           TAG: ${{ steps.release.outputs.tag }}
           VERSION: ${{ steps.release.outputs.version }}
           PRERELEASE: ${{ steps.release.outputs.prerelease }}
