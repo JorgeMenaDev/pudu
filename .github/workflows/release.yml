@@ -1,0 +1,139 @@
+name: Release
+
+# Every app change merged to main ships as a beta: a GitHub pre-release with the DMG.
+# Pushing a stable tag (vX.Y.Z) on a published beta's commit rebuilds it as a stable release.
+# How to ship, promote and recover: .agents/skills/release/SKILL.md
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "bun.lock"
+      - "scripts/release-version.ts"
+      - ".github/workflows/release.yml"
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+
+# Explicit bash adds pipefail, which GitHub's default shell leaves out.
+defaults:
+  run:
+    shell: bash
+
+# One release at a time, in order. queue: max keeps every pending run, so a
+# stable tag pushed while a beta builds is never dropped.
+concurrency:
+  group: release
+  cancel-in-progress: false
+  queue: max
+
+jobs:
+  release:
+    runs-on: macos-15
+    timeout-minutes: 90 # Apple notarization is usually minutes, occasionally much longer
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0 # the version script reads every tag
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Resolve version
+        id: release
+        run: bun scripts/release-version.ts | tee -a "$GITHUB_OUTPUT"
+
+      - name: Require a published beta under a stable tag
+        if: steps.release.outputs.prerelease == 'false'
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          beta="$(git tag --points-at HEAD --list 'v*-beta.*' | head -n 1)"
+          if [ -z "$beta" ] || [ "$(gh release view "$beta" --json isDraft,isPrerelease --jq '.isPrerelease and (.isDraft | not)')" != true ]; then
+            echo "::error::$TAG must point at the commit of a published beta, so stable only ships builds testers already ran."
+            exit 1
+          fi
+          echo "Promoting $beta to $TAG"
+
+      - run: bun run typecheck
+      - run: bun test
+
+      - run: bun run build
+
+      # Developer ID signing when CSC_LINK is set; electron-builder notarizes
+      # because the APPLE_API_* variables are present. Otherwise ad-hoc signing.
+      - name: Package
+        id: package
+        working-directory: apps/desktop
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          args=(--publish never "-c.extraMetadata.version=$VERSION")
+          if [ -n "$CSC_LINK" ]; then
+            printf '%s' "$APPLE_API_KEY" > "$RUNNER_TEMP/notary.p8"
+            export APPLE_API_KEY="$RUNNER_TEMP/notary.p8"
+            bun run dist "${args[@]}"
+            echo "signed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::No signing secrets: this build is ad-hoc signed and not notarized."
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER
+            bun run dist "${args[@]}" -c.mac.identity=-
+            echo "signed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Verify DMG
+        env:
+          DMG: apps/desktop/release/Pudu-${{ steps.release.outputs.version }}-arm64.dmg
+          SIGNED: ${{ steps.package.outputs.signed }}
+        run: |
+          set -euo pipefail
+          hdiutil verify "$DMG"
+          mount="$RUNNER_TEMP/pudu"
+          hdiutil attach "$DMG" -readonly -nobrowse -mountpoint "$mount"
+          trap 'hdiutil detach "$mount"' EXIT
+          codesign --verify --deep --strict --verbose=2 "$mount/Pudu.app"
+          if [ "$SIGNED" = true ]; then
+            spctl --assess --type execute --verbose=2 "$mount/Pudu.app"
+            xcrun stapler validate "$mount/Pudu.app"
+          fi
+
+      - name: Publish
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          VERSION: ${{ steps.release.outputs.version }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          NOTES_START: ${{ steps.release.outputs.notes_start }}
+          SIGNED: ${{ steps.package.outputs.signed }}
+        run: |
+          set -euo pipefail
+          if [ "$PRERELEASE" = true ]; then
+            # Tag the built commit with git: creating the tag through the release
+            # API can need a workflows permission GITHUB_TOKEN cannot have.
+            git tag -f "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+          args=(--verify-tag --title "Pudu $VERSION" --generate-notes)
+          if [ -n "$NOTES_START" ]; then args+=(--notes-start-tag "$NOTES_START"); fi
+          if [ "$PRERELEASE" = true ]; then args+=(--prerelease); else args+=(--latest); fi
+          if [ "$SIGNED" != true ]; then
+            args+=(--notes "Not notarized by Apple yet. See [Install](https://github.com/$GITHUB_REPOSITORY#install) for the first launch. macOS may ask for Screen Recording, Camera and Microphone again after each update.")
+          fi
+          gh release create "$TAG" "apps/desktop/release/Pudu-$VERSION-arm64.dmg" "${args[@]}"
+
+      - name: Remove the notary key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/notary.p8"
