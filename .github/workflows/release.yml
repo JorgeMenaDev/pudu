@@ -33,7 +33,7 @@ concurrency:
 jobs:
   release:
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 90 # Apple notarization is usually minutes, occasionally much longer
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
