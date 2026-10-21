@@ -18,6 +18,11 @@ on:
 permissions:
   contents: write
 
+# Explicit bash adds pipefail, which GitHub's default shell leaves out.
+defaults:
+  run:
+    shell: bash
+
 # One release at a time, in order. queue: max keeps every pending run, so a
 # stable tag pushed while a beta builds is never dropped.
 concurrency:
@@ -61,12 +66,7 @@ jobs:
       - run: bun run typecheck
       - run: bun test
 
-      - name: Build
-        env:
-          VERSION: ${{ steps.release.outputs.version }}
-        run: |
-          (cd apps/desktop && npm pkg set "version=$VERSION")
-          bun run build
+      - run: bun run build
 
       # Developer ID signing when CSC_LINK is set; electron-builder notarizes
       # because the APPLE_API_* variables are present. Otherwise ad-hoc signing.
@@ -79,17 +79,19 @@ jobs:
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          VERSION: ${{ steps.release.outputs.version }}
         run: |
           set -euo pipefail
+          args=(--publish never "-c.extraMetadata.version=$VERSION")
           if [ -n "$CSC_LINK" ]; then
             printf '%s' "$APPLE_API_KEY" > "$RUNNER_TEMP/notary.p8"
             export APPLE_API_KEY="$RUNNER_TEMP/notary.p8"
-            bun run dist --publish never
+            bun run dist "${args[@]}"
             echo "signed=true" >> "$GITHUB_OUTPUT"
           else
             echo "::warning::No signing secrets: this build is ad-hoc signed and not notarized."
             unset CSC_LINK CSC_KEY_PASSWORD APPLE_API_KEY APPLE_API_KEY_ID APPLE_API_ISSUER
-            bun run dist --publish never -c.mac.identity=-
+            bun run dist "${args[@]}" -c.mac.identity=-
             echo "signed=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -118,7 +120,13 @@ jobs:
           SIGNED: ${{ steps.package.outputs.signed }}
         run: |
           set -euo pipefail
-          args=(--target "$GITHUB_SHA" --title "Pudu $VERSION" --generate-notes)
+          if [ "$PRERELEASE" = true ]; then
+            # Tag the built commit with git: creating the tag through the release
+            # API can need a workflows permission GITHUB_TOKEN cannot have.
+            git tag -f "$TAG" "$GITHUB_SHA"
+            git push origin "refs/tags/$TAG"
+          fi
+          args=(--verify-tag --title "Pudu $VERSION" --generate-notes)
           if [ -n "$NOTES_START" ]; then args+=(--notes-start-tag "$NOTES_START"); fi
           if [ "$PRERELEASE" = true ]; then args+=(--prerelease); else args+=(--latest); fi
           if [ "$SIGNED" != true ]; then

@@ -43,7 +43,8 @@ function nextCore(packageVersion: string, latestStable: string | undefined): str
 }
 
 if (import.meta.main) {
-  const tags = (await Bun.$`git tag --list ${"v*"}`.text()).split("\n").filter(Boolean);
+  // Only tags this commit contains count, so rerunning an older commit's build keeps its version.
+  const tags = (await Bun.$`git tag --list ${"v*"} --merged HEAD`.text()).split("\n").filter(Boolean);
   const { version } = (await Bun.file(new URL("../apps/desktop/package.json", import.meta.url)).json()) as {
     version: string;
   };
