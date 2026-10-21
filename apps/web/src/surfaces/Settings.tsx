@@ -109,14 +109,18 @@ function PermissionsPane() {
   if (!status || !state) return null;
   const missing = missingPermissions(status.permissions, state.settings);
   return (
-    <div className="flex flex-col gap-3">
-      <Group>
-        {PERMISSION_KINDS.map((kind) => {
-          const permission = status.permissions[kind];
-          // macOS asks only once; after that, access changes in System Settings.
-          const canAsk = permission === "not-determined";
-          return (
-            <Row key={kind} icon={PERMISSION_ROWS[kind].icon} title={PERMISSION_LABELS[kind]} detail={PERMISSION_ROWS[kind].detail}>
+    <Group>
+      {PERMISSION_KINDS.map((kind) => {
+        const permission = status.permissions[kind];
+        // macOS asks only once; after that, access changes in System Settings.
+        // Screen Recording is only ever allowed there.
+        const canAsk = kind !== "screen" && permission === "not-determined";
+        // macOS applies a Screen Recording grant only after a relaunch, and can
+        // report Denied until then, so restart is offered once its pane was opened.
+        const offerRestart = kind === "screen" && permission !== "granted" && status.screenSettingsOpened;
+        return (
+          <div key={kind}>
+            <Row icon={PERMISSION_ROWS[kind].icon} title={PERMISSION_LABELS[kind]} detail={PERMISSION_ROWS[kind].detail}>
               <span
                 className={cn(
                   "flex items-center gap-1.5 text-xs",
@@ -140,18 +144,18 @@ function PermissionsPane() {
                 </Button>
               )}
             </Row>
-          );
-        })}
-      </Group>
-      {status.restartNeeded && (
-        <div className="flex items-center gap-3 rounded-xl border border-info/30 bg-info/8 px-4 py-3">
-          <span className="flex-1 text-sm">Screen Recording is allowed. macOS applies it after Pudu restarts.</span>
-          <Button size="sm" disabled={state.phase !== "idle"} onClick={() => void pudu.relaunch()}>
-            Restart Pudu
-          </Button>
-        </div>
-      )}
-    </div>
+            {offerRestart && (
+              <div className="flex items-center gap-3 pr-4 pb-3 pl-15">
+                <span className="flex-1 text-xs text-muted-foreground">After you allow Pudu, restart it.</span>
+                <Button size="sm" disabled={state.phase !== "idle"} onClick={() => void pudu.relaunch()}>
+                  Restart Pudu
+                </Button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </Group>
   );
 }
 

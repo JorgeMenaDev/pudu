@@ -100,7 +100,7 @@ For comparison, the original of a full-screen recording on a large display is ab
 Right-click the menu bar icon for your last three recordings, **Settings…** and **Open at login**. The gear in the launcher opens Settings too.
 
 - **General:** open at login, the countdown, and the recordings folder.
-- **Permissions:** Screen Recording, Camera and Microphone, each with its status and one button: **Allow** while macOS can still ask, otherwise **Open System Settings**. After you allow Screen Recording, click **Restart Pudu**, because macOS applies it only after a relaunch.
+- **Permissions:** Screen Recording, Camera and Microphone, each with its status. Camera and Microphone have one button: **Allow** while macOS can still ask, otherwise **Open System Settings**. Screen Recording is allowed only in System Settings. Its **Open System Settings** button adds Pudu to the Screen Recording list and opens it. After that, **Restart Pudu** appears, because macOS applies the change only after a relaunch.
 - **Shortcuts:** the four global shortcuts.
 
 When the current setup is missing a permission, the menu bar icon shows a small warning mark, its tooltip names the permission, and the menu offers **Fix permissions…**. Screen Recording is always needed. Camera and Microphone are needed only while they are on.

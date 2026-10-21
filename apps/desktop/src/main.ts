@@ -45,7 +45,7 @@ protocol.registerSchemesAsPrivileged([
 let tray: Tray | null = null;
 let trayTimer: NodeJS.Timeout | null = null;
 let appStatus: AppStatus | null = null;
-let screenAllowedAtLaunch = false;
+let screenSettingsOpened = false;
 const listFormat = new Intl.ListFormat("en-GB");
 
 function formatClock(ms: number): string {
@@ -81,7 +81,7 @@ function refreshAppStatus(studio: Studio): AppStatus {
   const dir = studio.recordings.dir;
   const status: AppStatus = {
     permissions,
-    restartNeeded: !screenAllowedAtLaunch && permissions.screen === "granted",
+    screenSettingsOpened,
     openAtLogin: app.getLoginItemSettings().openAtLogin,
     recordingsFolder: dir.startsWith(`${home}/`) ? `~${dir.slice(home.length)}` : dir,
   };
@@ -165,11 +165,15 @@ function registerIpc(studio: Studio, library: Library): void {
   handle(IPC.updateSettings, (patch: Partial<RecorderSettings>) => studio.updateSettings(patch));
   handle(IPC.listSources, () => studio.listSources());
   handle(IPC.getAppStatus, () => refreshAppStatus(studio));
-  handle(IPC.requestPermission, async (kind: PermissionKind) => {
+  handle(IPC.requestPermission, async (kind: Exclude<PermissionKind, "screen">) => {
     await Permissions.requestPermission(kind);
     refreshAppStatus(studio);
   });
-  handle(IPC.openPermissionSettings, (kind: PermissionKind) => Permissions.openPermissionSettings(kind));
+  handle(IPC.openPermissionSettings, async (kind: PermissionKind) => {
+    await Permissions.openPermissionSettings(kind);
+    if (kind === "screen") screenSettingsOpened = true;
+    refreshAppStatus(studio);
+  });
   handle(IPC.setOpenAtLogin, (enabled: boolean) => setOpenAtLogin(studio, enabled));
   handle(IPC.revealRecordingsFolder, async () => {
     await library.ensureDir();
@@ -237,7 +241,6 @@ function registerIpc(studio: Studio, library: Library): void {
 }
 
 void app.whenReady().then(() => {
-  screenAllowedAtLaunch = Permissions.getPermissions().screen === "granted";
   // PUDU_LIBRARY_DIR points the app at another folder, for demos and screenshots.
   const library = new Library(process.env.PUDU_LIBRARY_DIR ?? path.join(app.getPath("videos"), "Pudu"));
   const studio = new Studio(new SettingsStore(app.getPath("userData")), library, syncTray);
@@ -253,10 +256,11 @@ void app.whenReady().then(() => {
     if (studio.isBusy) studio.stop();
     else studio.toggleLauncher(tray?.getBounds() ?? null);
   });
+  // A take can start while the library loads, so the menu is chosen after it.
+  // An unreadable library still opens the menu, without recent recordings.
   tray.on("right-click", async () => {
-    if (studio.isBusy) return tray?.popUpContextMenu(busyMenu(studio));
-    const recent = (await studio.recordings.list()).slice(0, 3);
-    tray?.popUpContextMenu(idleMenu(studio, refreshAppStatus(studio), recent));
+    const recent = studio.isBusy ? [] : await studio.recordings.list().then((all) => all.slice(0, 3), () => []);
+    tray?.popUpContextMenu(studio.isBusy ? busyMenu(studio) : idleMenu(studio, refreshAppStatus(studio), recent));
   });
   // Hovering the icon or focusing a window reads permissions again, so the warning,
   // its tooltip and an open Settings window stay current.

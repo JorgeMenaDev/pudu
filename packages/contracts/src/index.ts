@@ -116,8 +116,10 @@ export function missingPermissions(
 // announces none of it, so main reads it again whenever Pudu is used.
 export interface AppStatus {
   readonly permissions: Permissions;
-  // Screen Recording was allowed after launch; macOS applies it only after a relaunch.
-  readonly restartNeeded: boolean;
+  // Pudu opened the Screen Recording pane since launch. macOS applies a grant
+  // there only after a relaunch, and can report Denied until then, so Settings
+  // offers Restart Pudu instead of waiting for the status to change.
+  readonly screenSettingsOpened: boolean;
   readonly openAtLogin: boolean;
   // With ~ for the home folder, as Finder shows it.
   readonly recordingsFolder: string;
@@ -161,8 +163,9 @@ export interface PuduBridge {
   listSources(): Promise<ReadonlyArray<CaptureSource>>;
   getAppStatus(): Promise<AppStatus>;
   onAppStatus(listener: (status: AppStatus) => void): Unsubscribe;
-  // Main sends the new status to every window once macOS answers.
-  requestPermission(kind: PermissionKind): Promise<void>;
+  // Only the camera and microphone are asked for in-app; Screen Recording is
+  // allowed in System Settings. Main sends the new status once macOS answers.
+  requestPermission(kind: Exclude<PermissionKind, "screen">): Promise<void>;
   openPermissionSettings(kind: PermissionKind): Promise<void>;
   setOpenAtLogin(enabled: boolean): Promise<void>;
   revealRecordingsFolder(): Promise<void>;
