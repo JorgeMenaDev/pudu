@@ -92,9 +92,48 @@ export interface CompressProgress {
   readonly progress: number; // 0–1
 }
 
-export type PermissionKind = "screen" | "camera" | "microphone";
+export const PERMISSION_KINDS = ["screen", "camera", "microphone"] as const;
+export type PermissionKind = (typeof PERMISSION_KINDS)[number];
 export type PermissionStatus = "granted" | "denied" | "not-determined" | "restricted" | "unknown";
 export type Permissions = Record<PermissionKind, PermissionStatus>;
+
+export const PERMISSION_LABELS: Record<PermissionKind, string> = {
+  screen: "Screen Recording",
+  camera: "Camera",
+  microphone: "Microphone",
+};
+
+// Screen Recording is always needed; the camera and microphone only while they are on.
+export function missingPermissions(
+  permissions: Permissions,
+  settings: Pick<RecorderSettings, "cameraEnabled" | "micEnabled">,
+): PermissionKind[] {
+  const needed = { screen: true, camera: settings.cameraEnabled, microphone: settings.micEnabled };
+  return PERMISSION_KINDS.filter((kind) => needed[kind] && permissions[kind] !== "granted");
+}
+
+// What main reads from macOS for the menu bar and the Settings window. macOS
+// announces none of it, so main reads it again whenever Pudu is used.
+export interface AppStatus {
+  readonly permissions: Permissions;
+  // Screen Recording was allowed after launch; macOS applies it only after a relaunch.
+  readonly restartNeeded: boolean;
+  readonly openAtLogin: boolean;
+  // With ~ for the home folder, as Finder shows it.
+  readonly recordingsFolder: string;
+}
+
+// The Settings window opens on a pane through its hash: `#/settings/<pane>`.
+export type SettingsPane = "general" | "permissions" | "shortcuts";
+
+// Global shortcuts in Electron accelerator syntax. The same defaults as Loom, so
+// they feel familiar.
+export const SHORTCUTS = {
+  startStop: "Command+Shift+L",
+  pause: "Alt+Shift+P",
+  restart: "Command+Shift+R",
+  cancel: "Alt+Shift+C",
+} as const;
 
 // What the hidden recorder window reports once its MediaRecorder has flushed.
 // Duration comes from main's own clock, which already excludes pauses.
@@ -107,7 +146,7 @@ export interface RecorderResult {
 
 export type RecorderCommand = "begin" | "pause" | "resume" | "stop" | "discard";
 
-export type Surface = "library" | "launcher" | "bubble" | "controls" | "countdown" | "recorder";
+export type Surface = "library" | "launcher" | "bubble" | "controls" | "countdown" | "recorder" | "settings";
 
 export type Unsubscribe = () => void;
 
@@ -120,9 +159,16 @@ export interface PuduBridge {
   updateSettings(patch: Partial<RecorderSettings>): Promise<void>;
 
   listSources(): Promise<ReadonlyArray<CaptureSource>>;
-  getPermissions(): Promise<Permissions>;
-  requestPermission(kind: PermissionKind): Promise<PermissionStatus>;
+  getAppStatus(): Promise<AppStatus>;
+  onAppStatus(listener: (status: AppStatus) => void): Unsubscribe;
+  // Main sends the new status to every window once macOS answers.
+  requestPermission(kind: PermissionKind): Promise<void>;
   openPermissionSettings(kind: PermissionKind): Promise<void>;
+  setOpenAtLogin(enabled: boolean): Promise<void>;
+  revealRecordingsFolder(): Promise<void>;
+  // Applies a new Screen Recording grant; does nothing during a take.
+  relaunch(): Promise<void>;
+  openSettings(): Promise<void>;
 
   openLauncher(): Promise<void>;
   openLibrary(): Promise<void>;
@@ -162,9 +208,14 @@ export const IPC = {
   getState: "pudu:get-state",
   updateSettings: "pudu:update-settings",
   listSources: "pudu:list-sources",
-  getPermissions: "pudu:get-permissions",
+  appStatus: "pudu:app-status",
+  getAppStatus: "pudu:get-app-status",
   requestPermission: "pudu:request-permission",
   openPermissionSettings: "pudu:open-permission-settings",
+  setOpenAtLogin: "pudu:set-open-at-login",
+  revealRecordingsFolder: "pudu:reveal-recordings-folder",
+  relaunch: "pudu:relaunch",
+  openSettings: "pudu:open-settings",
   openLauncher: "pudu:open-launcher",
   openLibrary: "pudu:open-library",
   hideLauncher: "pudu:hide-launcher",

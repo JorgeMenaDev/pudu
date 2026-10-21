@@ -18,13 +18,9 @@ export function getPermissions(): Permissions {
 
 // Camera and mic can be asked for in-app. Screen recording can only be granted
 // in System Settings, so for it we open the right pane instead.
-export async function requestPermission(kind: PermissionKind): Promise<PermissionStatus> {
-  if (kind === "screen") {
-    await openPermissionSettings(kind);
-    return getPermissions().screen;
-  }
+export async function requestPermission(kind: PermissionKind): Promise<void> {
+  if (kind === "screen") return openPermissionSettings(kind);
   await systemPreferences.askForMediaAccess(kind);
-  return getPermissions()[kind];
 }
 
 export async function openPermissionSettings(kind: PermissionKind): Promise<void> {

@@ -42,6 +42,11 @@ Pudu does the useful part and nothing else:
 
 ### Start a recording
 
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/launcher-light.png" />
+  <img src="assets/screenshots/launcher-dark.png" alt="The Pudu launcher under the menu bar icon" width="360" />
+</picture>
+
 Click the menu bar icon or **New recording**. Pick a whole screen or a single window, then your camera and microphone. A level meter shows that your mic can hear you.
 
 Recording starts after a 3-second countdown. Click the countdown to skip it, or turn it off.
@@ -84,6 +89,21 @@ Full-resolution screen recordings are big, and email and chat apps have limits. 
 | **Sharp · 1080p** | Code and small text that must stay crisp | about 28 MB |
 
 For comparison, the original of a full-screen recording on a large display is about 50 MB per minute. The copy is a standard H.264/AAC MP4 with "fast start", so it plays inline in Teams, Jira, Slack, Outlook and Gmail, and on Windows, Android and iOS.
+
+### Settings
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="assets/screenshots/settings-light.png" />
+  <img src="assets/screenshots/settings-dark.png" alt="Pudu Settings, showing which permissions are allowed" width="560" />
+</picture>
+
+Right-click the menu bar icon for your last three recordings, **Settings…** and **Open at login**. The gear in the launcher opens Settings too.
+
+- **General:** open at login, the countdown, and the recordings folder.
+- **Permissions:** Screen Recording, Camera and Microphone, each with its status and one button: **Allow** while macOS can still ask, otherwise **Open System Settings**. After you allow Screen Recording, click **Restart Pudu**, because macOS applies it only after a relaunch.
+- **Shortcuts:** the four global shortcuts.
+
+When the current setup is missing a permission, the menu bar icon shows a small warning mark, its tooltip names the permission, and the menu offers **Fix permissions…**. Screen Recording is always needed. Camera and Microphone are needed only while they are on.
 
 ## Keyboard shortcuts
 
@@ -142,13 +162,13 @@ Pudu follows the architecture of [T3 Code](https://github.com/pingdotgg/t3code):
 packages/contracts   Types and IPC channel names shared by every process
 apps/desktop         Electron main process
   studio.ts            The recording lifecycle and its windows (the single source of state)
-  windows.ts           Window factories: library, launcher, bubble, toolbar, countdown, recorder
+  windows.ts           Window factories: library, launcher, settings, bubble, toolbar, countdown, recorder
   library.ts           Recordings on disk: <id>.mp4 + <id>.jpg + <id>.json
   compress.ts          Share copies through macOS's built-in avconvert
   mediaProtocol.ts     pudu-media:// with byte ranges, so the player can seek
   preload.ts           The window.pudu bridge
 apps/web             React 19 + Vite + Tailwind 4; one bundle for every window (#/surface)
-  surfaces/            Library, Launcher, Bubble, Controls, Countdown, Recorder (hidden)
+  surfaces/            Library, Launcher, Settings, Bubble, Controls, Countdown, Recorder (hidden)
   components/ui/       T3 Code's Base UI component kit
 ```
 

@@ -5,21 +5,22 @@ import {
   MicIcon,
   MicOffIcon,
   MonitorIcon,
+  SettingsIcon,
   VideoIcon,
   VideoOffIcon,
   XIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 
-import type {
-  CaptureSource,
-  CaptureSourceKind,
-  PermissionKind,
-  Permissions,
-  RecorderSettings,
+import {
+  missingPermissions,
+  type CaptureSource,
+  type CaptureSourceKind,
+  type PermissionKind,
+  type RecorderSettings,
 } from "@pudu/contracts";
 
-import { pudu, useRecorderState, useSystemTheme } from "../bridge";
+import { pudu, useAppStatus, useRecorderState, useSystemTheme } from "../bridge";
 import { Button } from "../components/ui/button";
 import { Kbd, KbdGroup } from "../components/ui/kbd";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -37,17 +38,6 @@ function useSources() {
     return () => window.removeEventListener("focus", refresh);
   }, [refresh]);
   return sources;
-}
-
-function usePermissions() {
-  const [permissions, setPermissions] = useState<Permissions | null>(null);
-  const refresh = useCallback(() => void pudu.getPermissions().then(setPermissions), []);
-  useEffect(() => {
-    refresh();
-    window.addEventListener("focus", refresh);
-    return () => window.removeEventListener("focus", refresh);
-  }, [refresh]);
-  return { permissions, refresh };
 }
 
 function useDevices(kind: MediaDeviceKind, enabled: boolean) {
@@ -212,18 +202,23 @@ function LevelMeter({ level }: { level: number }) {
   );
 }
 
-function PermissionCallout({ kind, onFix }: { kind: PermissionKind; onFix: () => void }) {
+// For a denied permission: macOS never asks twice, so the fix is in System Settings.
+function PermissionCallout({ kind }: { kind: PermissionKind }) {
   const copy: Record<PermissionKind, string> = {
     screen: "Allow Screen Recording for Pudu in System Settings, then reopen this panel.",
-    camera: "Pudu can't use your camera yet.",
-    microphone: "Pudu can't use your microphone yet.",
+    camera: "Allow Camera for Pudu in System Settings.",
+    microphone: "Allow Microphone for Pudu in System Settings.",
   };
   return (
     <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-surface px-2.5 py-2 text-xs text-warning-foreground">
       <CircleAlertIcon className="mt-px size-3.5 shrink-0" />
       <span className="flex-1 leading-snug">{copy[kind]}</span>
-      <button type="button" onClick={onFix} className="shrink-0 cursor-pointer font-medium underline-offset-2 hover:underline">
-        {kind === "screen" ? "Open Settings" : "Allow"}
+      <button
+        type="button"
+        onClick={() => void pudu.openPermissionSettings(kind)}
+        className="shrink-0 cursor-pointer font-medium underline-offset-2 hover:underline"
+      >
+        Open Settings
       </button>
     </div>
   );
@@ -233,7 +228,7 @@ export function Launcher() {
   useSystemTheme();
   const state = useRecorderState();
   const sources = useSources();
-  const { permissions, refresh: refreshPermissions } = usePermissions();
+  const permissions = useAppStatus()?.permissions ?? null;
   const settings = state?.settings;
   const cameras = useDevices("videoinput", permissions?.camera === "granted");
   const mics = useDevices("audioinput", permissions?.microphone === "granted");
@@ -241,16 +236,12 @@ export function Launcher() {
   const [tab, setTab] = useState<CaptureSourceKind>("screen");
 
   const update = (patch: Partial<RecorderSettings>) => void pudu.updateSettings(patch);
-  const ask = async (kind: PermissionKind) => {
-    await pudu.requestPermission(kind);
-    refreshPermissions();
-  };
 
   // Turning a device on is the moment to ask macOS for access to it.
   useEffect(() => {
     if (!permissions || !settings) return;
-    if (settings.cameraEnabled && permissions.camera === "not-determined") void ask("camera");
-    else if (settings.micEnabled && permissions.microphone === "not-determined") void ask("microphone");
+    if (settings.cameraEnabled && permissions.camera === "not-determined") void pudu.requestPermission("camera");
+    else if (settings.micEnabled && permissions.microphone === "not-determined") void pudu.requestPermission("microphone");
   }, [permissions, settings?.cameraEnabled, settings?.micEnabled]);
 
   const visible = sources?.filter((source) => source.kind === tab) ?? [];
@@ -259,13 +250,12 @@ export function Launcher() {
       ? settings.sourceId
       : (sources?.find((source) => source.kind === "screen")?.id ?? null);
 
-  const blocked: PermissionKind[] = permissions
-    ? (["screen", "camera", "microphone"] as const).filter(
-        (kind) =>
-          (permissions[kind] === "denied" || permissions[kind] === "restricted") &&
-          (kind === "screen" || (kind === "camera" ? settings?.cameraEnabled : settings?.micEnabled)),
-      )
-    : [];
+  const blocked =
+    permissions && settings
+      ? missingPermissions(permissions, settings).filter(
+          (kind) => permissions[kind] === "denied" || permissions[kind] === "restricted",
+        )
+      : [];
 
   const start = async () => {
     if (selectedId !== settings?.sourceId) await pudu.updateSettings({ sourceId: selectedId });
@@ -281,6 +271,17 @@ export function Launcher() {
           </span>
           <span className="font-semibold text-sm tracking-tight">Pudu</span>
           <div className="no-drag ms-auto flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              title="Settings"
+              onClick={() => {
+                void pudu.hideLauncher();
+                void pudu.openSettings();
+              }}
+            >
+              <SettingsIcon />
+            </Button>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -391,11 +392,7 @@ export function Launcher() {
             </div>
           )}
           {blocked.map((kind) => (
-            <PermissionCallout
-              key={kind}
-              kind={kind}
-              onFix={() => void (kind === "screen" ? pudu.openPermissionSettings(kind) : ask(kind))}
-            />
+            <PermissionCallout key={kind} kind={kind} />
           ))}
 
           <Button

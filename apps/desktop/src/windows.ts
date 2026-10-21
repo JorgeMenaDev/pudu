@@ -2,7 +2,7 @@ import * as path from "node:path";
 
 import { app, BrowserWindow, nativeTheme, screen, type Display, type Rectangle } from "electron";
 
-import { BUBBLE_DIAMETER, type BubbleSize, type Surface } from "@pudu/contracts";
+import { BUBBLE_DIAMETER, type BubbleSize, type SettingsPane, type Surface } from "@pudu/contracts";
 
 // Every surface is the same React bundle; the hash picks the screen to render.
 const DEV_URL = process.env.PUDU_DEV_URL;
@@ -14,9 +14,9 @@ export const BUBBLE_PADDING = 20;
 const CONTROLS_SIZE = { width: 56, height: 244 };
 const EDGE_MARGIN = 24;
 
-function load(win: BrowserWindow, surface: Surface): void {
-  if (DEV_URL) void win.loadURL(`${DEV_URL}#/${surface}`);
-  else void win.loadFile(appFile("dist-renderer/index.html"), { hash: `/${surface}` });
+function load(win: BrowserWindow, route: Surface | `settings/${SettingsPane}`): void {
+  if (DEV_URL) void win.loadURL(`${DEV_URL}#/${route}`);
+  else void win.loadFile(appFile("dist-renderer/index.html"), { hash: `/${route}` });
 }
 
 function background(): string {
@@ -63,6 +63,30 @@ export function createLibraryWindow(): BrowserWindow {
   win.once("ready-to-show", () => win.show());
   load(win, "library");
   return win;
+}
+
+export function createSettingsWindow(pane: SettingsPane): BrowserWindow {
+  const win = new BrowserWindow({
+    width: 560,
+    height: 360,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    show: false,
+    title: "Pudu Settings",
+    titleBarStyle: "hiddenInset",
+    backgroundColor: background(),
+    webPreferences: webPreferences(),
+  });
+  win.once("ready-to-show", () => win.show());
+  showSettingsPane(win, pane);
+  return win;
+}
+
+// Only the hash changes, so an open Settings window switches pane without reloading.
+export function showSettingsPane(win: BrowserWindow, pane: SettingsPane): void {
+  load(win, `settings/${pane}`);
 }
 
 // The launcher hangs under the menu bar icon, like Loom's popover.

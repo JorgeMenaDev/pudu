@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { PuduBridge, RecorderState } from "@pudu/contracts";
+import type { AppStatus, PuduBridge, RecorderState, Unsubscribe } from "@pudu/contracts";
 
 declare global {
   interface Window {
@@ -10,19 +10,28 @@ declare global {
 
 export const pudu = window.pudu;
 
-// Live recorder state from the main process; null until the first read lands.
-export function useRecorderState(): RecorderState | null {
-  const [state, setState] = useState<RecorderState | null>(null);
+// A value main owns and broadcasts; null until the first read lands.
+function useMainValue<T>(read: () => Promise<T>, subscribe: (listener: (value: T) => void) => Unsubscribe): T | null {
+  const [value, setValue] = useState<T | null>(null);
   useEffect(() => {
     let active = true;
-    void pudu.getState().then((initial) => active && setState(initial));
-    const unsubscribe = pudu.onState(setState);
+    void read().then((initial) => active && setValue(initial));
+    const unsubscribe = subscribe(setValue);
     return () => {
       active = false;
       unsubscribe();
     };
-  }, []);
-  return state;
+  }, [read, subscribe]);
+  return value;
+}
+
+export function useRecorderState(): RecorderState | null {
+  return useMainValue(pudu.getState, pudu.onState);
+}
+
+// Permissions, the login item and the recordings folder, as main last read them.
+export function useAppStatus(): AppStatus | null {
+  return useMainValue(pudu.getAppStatus, pudu.onAppStatus);
 }
 
 // Re-renders every `intervalMs` while `enabled`, for ticking clocks.

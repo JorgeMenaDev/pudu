@@ -17,12 +17,17 @@ import {
 import {
   IPC,
   MEDIA_SCHEME,
+  PERMISSION_LABELS,
+  SHORTCUTS,
   elapsedMs,
+  missingPermissions,
+  type AppStatus,
   type CompressProgress,
   type PermissionKind,
   type RecorderResult,
   type RecorderSettings,
   type RecorderState,
+  type Recording,
   type SharePresetId,
 } from "@pudu/contracts";
 
@@ -33,20 +38,15 @@ import { SettingsStore } from "./settings.ts";
 import { Studio } from "./studio.ts";
 import { createTrayIcon } from "./trayIcon.ts";
 
-// The same defaults as Loom, so the shortcuts feel familiar.
-const SHORTCUTS = {
-  startStop: "Command+Shift+L",
-  pause: "Alt+Shift+P",
-  restart: "Command+Shift+R",
-  cancel: "Alt+Shift+C",
-} as const;
-
 protocol.registerSchemesAsPrivileged([
   { scheme: MEDIA_SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
 
 let tray: Tray | null = null;
 let trayTimer: NodeJS.Timeout | null = null;
+let appStatus: AppStatus | null = null;
+let screenAllowedAtLaunch = false;
+const listFormat = new Intl.ListFormat("en-GB");
 
 function formatClock(ms: number): string {
   const total = Math.floor(ms / 1000);
@@ -62,6 +62,40 @@ function syncTray(state: RecorderState): void {
   const render = () => tray?.setTitle(live ? ` ${formatClock(elapsedMs(state, Date.now()))}` : "");
   render();
   if (state.phase === "recording") trayTimer = setInterval(render, 500);
+  syncTrayWarning(state.settings);
+}
+
+// A warning mark, and a tooltip naming what's missing, while the current setup lacks a permission.
+function syncTrayWarning(settings: RecorderSettings): void {
+  if (!tray || !appStatus) return;
+  const missing = missingPermissions(appStatus.permissions, settings).map((kind) => PERMISSION_LABELS[kind]);
+  tray.setImage(createTrayIcon(missing.length > 0));
+  tray.setToolTip(missing.length > 0 ? `Pudu needs ${listFormat.format(missing)} access` : "Pudu");
+}
+
+// macOS announces no permission or login item change, so main reads them again
+// whenever Pudu is used, then updates the menu bar and every window.
+function refreshAppStatus(studio: Studio): AppStatus {
+  const permissions = Permissions.getPermissions();
+  const home = app.getPath("home");
+  const dir = studio.recordings.dir;
+  const status: AppStatus = {
+    permissions,
+    restartNeeded: !screenAllowedAtLaunch && permissions.screen === "granted",
+    openAtLogin: app.getLoginItemSettings().openAtLogin,
+    recordingsFolder: dir.startsWith(`${home}/`) ? `~${dir.slice(home.length)}` : dir,
+  };
+  appStatus = status;
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send(IPC.appStatus, status);
+  }
+  syncTrayWarning(studio.getState().settings);
+  return status;
+}
+
+function setOpenAtLogin(studio: Studio, enabled: boolean): void {
+  app.setLoginItemSettings({ openAtLogin: enabled });
+  refreshAppStatus(studio);
 }
 
 // Pauses, asks, and resumes if the answer is no, so a stray ⌥⇧C can't lose a take.
@@ -91,10 +125,21 @@ function busyMenu(studio: Studio): Menu {
   ]);
 }
 
-function idleMenu(studio: Studio): Menu {
+function idleMenu(studio: Studio, status: AppStatus, recent: ReadonlyArray<Recording>): Menu {
+  const missing = missingPermissions(status.permissions, studio.getState().settings);
   return Menu.buildFromTemplate([
     { label: "New recording", accelerator: SHORTCUTS.startStop, click: () => studio.openLauncher() },
     { label: "Open library", click: () => studio.showLibrary() },
+    ...recent.map((recording) => ({ label: recording.title, click: () => studio.showLibrary(recording.id) })),
+    { type: "separator" },
+    ...(missing.length > 0 ? [{ label: "Fix permissions…", click: () => studio.showSettings("permissions") }] : []),
+    { label: "Settings…", click: () => studio.showSettings() },
+    {
+      label: "Open at login",
+      type: "checkbox",
+      checked: status.openAtLogin,
+      click: (item) => setOpenAtLogin(studio, item.checked),
+    },
     { type: "separator" },
     { role: "quit", label: "Quit Pudu" },
   ]);
@@ -119,9 +164,24 @@ function registerIpc(studio: Studio, library: Library): void {
   handle(IPC.getState, () => studio.getState());
   handle(IPC.updateSettings, (patch: Partial<RecorderSettings>) => studio.updateSettings(patch));
   handle(IPC.listSources, () => studio.listSources());
-  handle(IPC.getPermissions, () => Permissions.getPermissions());
-  handle(IPC.requestPermission, (kind: PermissionKind) => Permissions.requestPermission(kind));
+  handle(IPC.getAppStatus, () => refreshAppStatus(studio));
+  handle(IPC.requestPermission, async (kind: PermissionKind) => {
+    await Permissions.requestPermission(kind);
+    refreshAppStatus(studio);
+  });
   handle(IPC.openPermissionSettings, (kind: PermissionKind) => Permissions.openPermissionSettings(kind));
+  handle(IPC.setOpenAtLogin, (enabled: boolean) => setOpenAtLogin(studio, enabled));
+  handle(IPC.revealRecordingsFolder, async () => {
+    await library.ensureDir();
+    await shell.openPath(library.dir);
+  });
+  // macOS applies a Screen Recording grant only after a relaunch. Never cut a take short.
+  handle(IPC.relaunch, () => {
+    if (studio.isBusy) return;
+    app.relaunch();
+    app.quit();
+  });
+  handle(IPC.openSettings, () => studio.showSettings());
   handle(IPC.openLauncher, () => studio.openLauncher(tray?.getBounds() ?? null));
   handle(IPC.hideLauncher, () => studio.hideLauncher());
   handle(IPC.openLibrary, () => studio.showLibrary());
@@ -177,6 +237,7 @@ function registerIpc(studio: Studio, library: Library): void {
 }
 
 void app.whenReady().then(() => {
+  screenAllowedAtLaunch = Permissions.getPermissions().screen === "granted";
   // PUDU_LIBRARY_DIR points the app at another folder, for demos and screenshots.
   const library = new Library(process.env.PUDU_LIBRARY_DIR ?? path.join(app.getPath("videos"), "Pudu"));
   const studio = new Studio(new SettingsStore(app.getPath("userData")), library, syncTray);
@@ -186,22 +247,28 @@ void app.whenReady().then(() => {
   registerShortcuts(studio);
 
   tray = new Tray(createTrayIcon());
-  tray.setToolTip("Pudu");
+  refreshAppStatus(studio);
   // Like Loom: a click stops a take or toggles the launcher; right-click has the rest.
   tray.on("click", () => {
     if (studio.isBusy) studio.stop();
     else studio.toggleLauncher(tray?.getBounds() ?? null);
   });
-  tray.on("right-click", () => {
-    if (studio.isBusy) tray?.popUpContextMenu(busyMenu(studio));
-    else tray?.popUpContextMenu(idleMenu(studio));
+  tray.on("right-click", async () => {
+    if (studio.isBusy) return tray?.popUpContextMenu(busyMenu(studio));
+    const recent = (await studio.recordings.list()).slice(0, 3);
+    tray?.popUpContextMenu(idleMenu(studio, refreshAppStatus(studio), recent));
   });
+  // Hovering the icon or focusing a window reads permissions again, so the warning,
+  // its tooltip and an open Settings window stay current.
+  tray.on("mouse-enter", () => refreshAppStatus(studio));
+  app.on("browser-window-focus", () => refreshAppStatus(studio));
 
   app.dock?.setMenu(
     Menu.buildFromTemplate([{ label: "New recording", click: () => studio.openLauncher() }]),
   );
   app.on("activate", () => studio.showLibrary());
-  studio.showLibrary();
+  // Opened at login, Pudu waits in the menu bar.
+  if (!app.getLoginItemSettings().wasOpenedAtLogin) studio.showLibrary();
 });
 
 // Pudu lives in the menu bar; closing the library keeps it running.
