@@ -1,0 +1,21 @@
+<!-- The menu bar icon: the face from icon.svg as one silhouette with the eyes and nose cut out.
+     Same coordinates as icon.svg; the viewBox is 18 pt at 36 units per point. Simplified for 18 pt:
+     thicker horns, bigger eyes and nose, a fuller chin, no colour and no record dot.
+     After editing, regenerate the app's copy: bun apps/desktop/scripts/tray-icon.ts -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="188 170 648 648">
+  <mask id="face" maskUnits="userSpaceOnUse" x="188" y="170" width="648" height="648">
+    <g fill="#fff">
+      <ellipse cx="316" cy="432" rx="122" ry="68" transform="rotate(20 316 432)"/>
+      <ellipse cx="708" cy="432" rx="122" ry="68" transform="rotate(-20 708 432)"/>
+      <path d="M512 330 C640 330 702 420 690 520 C680 640 610 748 512 764 C414 748 344 640 334 520 C322 420 384 330 512 330 Z"/>
+      <path d="M430 350 L448 240 Q458 222 468 240 L482 345 Z"/>
+      <path d="M594 350 L576 240 Q566 222 556 240 L542 345 Z"/>
+    </g>
+    <g fill="#000">
+      <circle cx="440" cy="530" r="40"/>
+      <circle cx="584" cy="530" r="40"/>
+      <ellipse cx="512" cy="674" rx="52" ry="36"/>
+    </g>
+  </mask>
+  <rect x="188" y="170" width="648" height="648" mask="url(#face)"/>
+</svg>
