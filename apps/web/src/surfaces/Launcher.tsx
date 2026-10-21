@@ -21,6 +21,7 @@ import {
 } from "@pudu/contracts";
 
 import { pudu, useAppStatus, useRecorderState, useSystemTheme } from "../bridge";
+import { PuduMark } from "../components/PuduMark";
 import { Button } from "../components/ui/button";
 import { Kbd, KbdGroup } from "../components/ui/kbd";
 import { Select, SelectItem, SelectPopup, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -266,9 +267,7 @@ export function Launcher() {
     <div className="h-full p-2">
       <div className="dropdown-glass flex h-full flex-col overflow-hidden rounded-2xl text-foreground">
         <header className="drag-region flex h-12 shrink-0 items-center gap-2 px-3.5">
-          <span className="relative flex size-5 items-center justify-center rounded-full border-2 border-foreground/85">
-            <span className="size-2 rounded-full bg-red-500" />
-          </span>
+          <PuduMark className="size-5" />
           <span className="font-semibold text-sm tracking-tight">Pudu</span>
           <div className="no-drag ms-auto flex items-center gap-0.5">
             <Button

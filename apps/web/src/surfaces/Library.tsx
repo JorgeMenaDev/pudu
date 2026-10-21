@@ -15,6 +15,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { SHARE_PRESETS, type ExportSize, type Recording, type SharePresetId } from "@pudu/contracts";
 
 import { pudu, useRecorderState, useSystemTheme } from "../bridge";
+import { PuduMark } from "../components/PuduMark";
 import {
   AlertDialog,
   AlertDialogClose,
@@ -90,9 +91,7 @@ function Sidebar({ count, onNew, onHome }: { count: number; onNew: () => void; o
     <aside className="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground">
       {/* Brand beside the traffic lights, as in T3 Code; the strip drags the window. */}
       <div className="drag-region flex h-[var(--workspace-topbar-height)] shrink-0 items-center gap-2 ps-[84px]">
-        <span className="relative flex size-4.5 items-center justify-center rounded-full border-2 border-foreground/85">
-          <span className="size-1.5 rounded-full bg-red-500" />
-        </span>
+        <PuduMark className="size-4.5" />
         <span className="font-semibold text-sm tracking-tight">Pudu</span>
       </div>
       <div className="flex flex-col gap-3 px-[var(--sidebar-content-inset)] pt-1">
