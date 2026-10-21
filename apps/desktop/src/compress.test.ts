@@ -1,18 +1,6 @@
 import { describe, expect, test } from "bun:test";
 
-import { fitWithin, parseProgress } from "./compress.ts";
-
-describe("fitWithin", () => {
-  const box = { width: 1280, height: 720 };
-
-  test("scales an ultrawide recording down to the box width", () => {
-    expect(fitWithin(3440, 1440, box)).toEqual({ width: 1280, height: 536 });
-  });
-
-  test("never upscales", () => {
-    expect(fitWithin(1024, 640, box)).toEqual({ width: 1024, height: 640 });
-  });
-});
+import { parseProgress } from "./compress.ts";
 
 describe("parseProgress", () => {
   test("reads the latest percentage in a chunk", () => {

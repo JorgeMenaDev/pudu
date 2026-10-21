@@ -7,10 +7,16 @@ import { Library } from "./library.ts";
 
 let dir: string;
 let library: Library;
+let conversions: string[];
 
 beforeEach(async () => {
   dir = await fs.mkdtemp(path.join(os.tmpdir(), "pudu-library-"));
-  library = new Library(dir);
+  conversions = [];
+  // Stands in for avconvert: records the preset and writes a small file.
+  library = new Library(dir, async (_source, output, avPreset) => {
+    conversions.push(avPreset);
+    await fs.writeFile(output, "small");
+  });
 });
 
 afterEach(() => fs.rm(dir, { recursive: true, force: true }));
@@ -52,6 +58,49 @@ describe("Library", () => {
 
   test("removes every file of a recording", async () => {
     await saveTake("a", new Date());
+    await library.remove("a");
+    expect(await fs.readdir(dir)).toEqual([]);
+  });
+
+  test("keeps a share copy next to the original, listed in its metadata", async () => {
+    await saveTake("a", new Date());
+    expect(await library.prepareCopy("a", "720p", () => {})).toBe(5);
+
+    expect((await fs.readdir(dir)).sort()).toEqual(["a.720p.mp4", "a.jpg", "a.json", "a.mp4"]);
+    const meta = JSON.parse(await fs.readFile(path.join(dir, "a.json"), "utf8"));
+    expect(meta.copies).toEqual({ "720p": "a.720p.mp4" });
+    expect((await library.list()).map((recording) => recording.id)).toEqual(["a"]);
+    await library.rename("a", "Login bug: 2/3");
+    expect(await library.exportFile("a", "720p")).toEqual({
+      path: path.join(dir, "a.720p.mp4"),
+      saveName: "Login bug- 2-3 (720p).mp4",
+    });
+  });
+
+  test("reuses a share copy, including one still being made", async () => {
+    await saveTake("a", new Date());
+    await Promise.all([library.prepareCopy("a", "720p", () => {}), library.prepareCopy("a", "720p", () => {})]);
+    await library.prepareCopy("a", "720p", () => {});
+    await library.prepareCopy("a", "540p", () => {});
+    expect(conversions).toEqual(["Preset1280x720", "Preset960x540"]);
+  });
+
+  test("makes a share copy again after it's deleted outside Pudu", async () => {
+    await saveTake("a", new Date());
+    await library.prepareCopy("a", "720p", () => {});
+    await fs.rm(path.join(dir, "a.720p.mp4"));
+
+    await expect(library.exportFile("a", "720p")).rejects.toThrow("File not found.");
+    expect(await library.prepareCopy("a", "720p", () => {})).toBe(5);
+    expect(conversions).toEqual(["Preset1280x720", "Preset1280x720"]);
+    expect((await library.exportFile("a", "720p")).path).toBe(path.join(dir, "a.720p.mp4"));
+  });
+
+  test("lists share copies made at the same time, and deletes them with the original", async () => {
+    await saveTake("a", new Date());
+    await Promise.all([library.prepareCopy("a", "720p", () => {}), library.prepareCopy("a", "540p", () => {})]);
+    const meta = JSON.parse(await fs.readFile(path.join(dir, "a.json"), "utf8"));
+    expect(meta.copies).toEqual({ "720p": "a.720p.mp4", "540p": "a.540p.mp4" });
     await library.remove("a");
     expect(await fs.readdir(dir)).toEqual([]);
   });

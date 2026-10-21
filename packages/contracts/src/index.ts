@@ -80,15 +80,19 @@ export interface Recording {
 // Share copies: smaller H.264/AAC MP4s that Teams, Jira, Slack and email all
 // play inline. `approxMbps` is measured on screen recordings, for size estimates.
 export const SHARE_PRESETS = [
-  { id: "720p", label: "Small · 720p", detail: "Best for Teams, Jira and email", approxMbps: 1.6 },
-  { id: "540p", label: "Smallest · 540p", detail: "For strict email size limits", approxMbps: 1.3 },
-  { id: "1080p", label: "Sharp · 1080p", detail: "Keeps small text crisp", approxMbps: 3.8 },
+  { id: "1080p", approxMbps: 3.8 },
+  { id: "720p", approxMbps: 1.6 },
+  { id: "540p", approxMbps: 1.3 },
 ] as const;
 
 export type SharePresetId = (typeof SHARE_PRESETS)[number]["id"];
 
-export interface CompressProgress {
+// What the Export panel hands out: the original file or one of its share copies.
+export type ExportSize = "original" | SharePresetId;
+
+export interface ExportProgress {
   readonly id: string;
+  readonly preset: SharePresetId;
   readonly progress: number; // 0–1
 }
 
@@ -189,12 +193,14 @@ export interface PuduBridge {
   listRecordings(): Promise<ReadonlyArray<Recording>>;
   renameRecording(id: string, title: string): Promise<void>;
   deleteRecording(id: string): Promise<void>;
-  revealRecording(id: string): Promise<void>;
-  shareRecording(id: string): Promise<void>;
-  copyRecording(id: string): Promise<void>;
-  // Makes a smaller copy next to the original and resolves with the copy's id.
-  compressRecording(id: string, preset: SharePresetId): Promise<string>;
-  onCompressProgress(listener: (progress: CompressProgress) => void): Unsubscribe;
+  revealRecording(id: string, size: ExportSize): Promise<void>;
+  shareRecording(id: string, size: ExportSize): Promise<void>;
+  copyRecording(id: string, size: ExportSize): Promise<void>;
+  // Asks where to save a copy of the file; false when cancelled.
+  saveRecording(id: string, size: ExportSize): Promise<boolean>;
+  // Makes (or reuses) a share copy next to the original; resolves with its size in bytes.
+  prepareExport(id: string, preset: SharePresetId): Promise<number>;
+  onExportProgress(listener: (progress: ExportProgress) => void): Unsubscribe;
   onLibraryChanged(listener: (focusId: string | null) => void): Unsubscribe;
 
   recorder: {
@@ -235,8 +241,9 @@ export const IPC = {
   revealRecording: "pudu:reveal-recording",
   shareRecording: "pudu:share-recording",
   copyRecording: "pudu:copy-recording",
-  compressRecording: "pudu:compress-recording",
-  compressProgress: "pudu:compress-progress",
+  saveRecording: "pudu:save-recording",
+  prepareExport: "pudu:prepare-export",
+  exportProgress: "pudu:export-progress",
   libraryChanged: "pudu:library-changed",
   recorderCommand: "pudu:recorder-command",
   recorderReady: "pudu:recorder-ready",
