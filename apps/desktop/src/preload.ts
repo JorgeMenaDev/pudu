@@ -16,9 +16,14 @@ const bridge: PuduBridge = {
   updateSettings: (patch) => ipcRenderer.invoke(IPC.updateSettings, patch),
 
   listSources: () => ipcRenderer.invoke(IPC.listSources),
-  getPermissions: () => ipcRenderer.invoke(IPC.getPermissions),
+  getAppStatus: () => ipcRenderer.invoke(IPC.getAppStatus),
+  onAppStatus: (listener) => subscribe(IPC.appStatus, listener),
   requestPermission: (kind) => ipcRenderer.invoke(IPC.requestPermission, kind),
   openPermissionSettings: (kind) => ipcRenderer.invoke(IPC.openPermissionSettings, kind),
+  setOpenAtLogin: (enabled) => ipcRenderer.invoke(IPC.setOpenAtLogin, enabled),
+  revealRecordingsFolder: () => ipcRenderer.invoke(IPC.revealRecordingsFolder),
+  relaunch: () => ipcRenderer.invoke(IPC.relaunch),
+  openSettings: () => ipcRenderer.invoke(IPC.openSettings),
 
   openLauncher: () => ipcRenderer.invoke(IPC.openLauncher),
   openLibrary: () => ipcRenderer.invoke(IPC.openLibrary),

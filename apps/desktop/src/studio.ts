@@ -16,6 +16,7 @@ import {
   type RecorderResult,
   type RecorderSettings,
   type RecorderState,
+  type SettingsPane,
 } from "@pudu/contracts";
 
 import { Library, newRecordingId } from "./library.ts";
@@ -40,6 +41,7 @@ export class Studio {
   private controls: BrowserWindow | null = null;
   private countdownWindow: BrowserWindow | null = null;
   private recorder: BrowserWindow | null = null;
+  private settingsWindow: BrowserWindow | null = null;
   private take: Take | null = null;
   private countdownTimer: NodeJS.Timeout | null = null;
   // desktopCapturer source id → Electron display id, for placing overlays.
@@ -95,6 +97,20 @@ export class Studio {
 
   notifyLibraryChanged(focusId: string | null = null): void {
     this.library?.webContents.send(IPC.libraryChanged, focusId);
+  }
+
+  // ── Settings ──────────────────────────────────────────────────────────
+
+  // Opens Settings on `pane`, or brings it to the front as it was.
+  showSettings(pane?: SettingsPane): void {
+    if (!this.settingsWindow || this.settingsWindow.isDestroyed()) {
+      this.settingsWindow = Windows.createSettingsWindow(pane ?? "general");
+      this.settingsWindow.on("closed", () => (this.settingsWindow = null));
+      return;
+    }
+    if (pane) Windows.showSettingsPane(this.settingsWindow, pane);
+    this.settingsWindow.show();
+    this.settingsWindow.focus();
   }
 
   // ── Launcher + camera preview ─────────────────────────────────────────

@@ -1,4 +1,4 @@
-import { shell, systemPreferences } from "electron";
+import { desktopCapturer, shell, systemPreferences } from "electron";
 
 import type { PermissionKind, PermissionStatus, Permissions } from "@pudu/contracts";
 
@@ -16,18 +16,17 @@ export function getPermissions(): Permissions {
   };
 }
 
-// Camera and mic can be asked for in-app. Screen recording can only be granted
-// in System Settings, so for it we open the right pane instead.
-export async function requestPermission(kind: PermissionKind): Promise<PermissionStatus> {
-  if (kind === "screen") {
-    await openPermissionSettings(kind);
-    return getPermissions().screen;
-  }
+// macOS asks for the camera and microphone in-app, once.
+export async function requestPermission(kind: Exclude<PermissionKind, "screen">): Promise<void> {
   await systemPreferences.askForMediaAccess(kind);
-  return getPermissions()[kind];
 }
 
+// Screen Recording is allowed only in System Settings, and Pudu is listed there
+// only after it has asked to capture once. So ask first; the answer doesn't matter.
 export async function openPermissionSettings(kind: PermissionKind): Promise<void> {
+  if (kind === "screen") {
+    await desktopCapturer.getSources({ types: ["screen"], thumbnailSize: { width: 0, height: 0 } }).catch(() => {});
+  }
   await shell.openExternal(
     `x-apple.systempreferences:com.apple.preference.security?${SETTINGS_PANES[kind]}`,
   );
