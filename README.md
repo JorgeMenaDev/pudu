@@ -161,13 +161,7 @@ The toolbar, countdown and launcher use `setContentProtection(true)`, so macOS l
 
 ## Roadmap
 
-- [ ] Shareable links (upload to your own storage)
-- [ ] System audio
-- [ ] Trim the start and end
-- [ ] Draw on screen while recording
-- [ ] Record a custom region
-- [ ] Notarized builds and auto-update
-- [ ] Intel Macs
+What comes next, from a better menu bar and one Export panel to system audio and trimming: see [ROADMAP.md](ROADMAP.md).
 
 Issues and pull requests are welcome.
 
