@@ -422,7 +422,11 @@ function RecordingDetail({ recording, onBack }: { recording: Recording; onBack: 
               <ExportPanel recording={recording} />
             </PopoverPopup>
           </Popover>
-          <IconAction label="Show in Finder" onClick={() => void pudu.revealRecording(recording.id, "original")}>
+          {/* A missing original has nothing to reveal: stay quiet, as before the Export panel. */}
+          <IconAction
+            label="Show in Finder"
+            onClick={() => void pudu.revealRecording(recording.id, "original").catch(() => undefined)}
+          >
             <FolderOpenIcon />
           </IconAction>
           <IconAction label="Delete" destructive onClick={() => setConfirmingDelete(true)}>
