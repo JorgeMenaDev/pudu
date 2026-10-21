@@ -135,12 +135,7 @@ While recording, click the menu bar icon to stop. Right-click it for the other a
 
 1. Download the latest `Pudu-…-arm64.dmg` from [Releases](https://github.com/JorgeMenaDev/pudu/releases/latest).
 2. Open it and drag **Pudu** to **Applications**.
-3. Builds after v0.1.0 are signed and notarized by Apple, so they open like any app. v0.1.0 is not: macOS blocks its first launch. Open **System Settings → Privacy & Security** and click **Open Anyway** (on macOS 14, right-click **Pudu** in Applications and choose **Open**). If macOS still refuses, run:
-
-   ```sh
-   xattr -dr com.apple.quarantine /Applications/Pudu.app
-   ```
-
+3. Open **Pudu** from Applications. It is signed and notarized by Apple, so it opens like any app.
 4. Allow **Screen Recording**, **Camera** and **Microphone** when macOS asks. For Screen Recording, macOS asks you to quit and reopen Pudu.
 
 Pudu needs macOS 14 or later on Apple silicon.
